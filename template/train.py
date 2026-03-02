@@ -2,14 +2,15 @@
 
 import os
 from contextlib import nullcontext
-
 import bdh
 import numpy as np
 import requests
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from template.gpu_support import GPUSupport
 
+GPUSupport()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # On a Mac you can also try
 # device=torch.device('mps')
@@ -62,14 +63,16 @@ def get_batch(split):
     if split == "train":
         data = data[: int(0.9 * len(data))]
     else:
-        data = data[int(0.9 * len(data)) :]
+        data = data[int(0.9 * len(data)):]
     ix = torch.randint(len(data) - BLOCK_SIZE, (BATCH_SIZE,))
     x = torch.stack(
-        [torch.from_numpy((data[i : i + BLOCK_SIZE]).astype(np.int64)) for i in ix]
+        [torch.from_numpy((data[i: i + BLOCK_SIZE]).astype(np.int64))
+         for i in ix]
     )
     y = torch.stack(
         [
-            torch.from_numpy((data[i + 1 : i + 1 + BLOCK_SIZE]).astype(np.int64))
+            torch.from_numpy(
+                (data[i + 1: i + 1 + BLOCK_SIZE]).astype(np.int64))
             for i in ix
         ]
     )
@@ -111,7 +114,8 @@ if __name__ == "__main__":
         scaler.update()
         optimizer.zero_grad()
         if step % LOG_FREQ == 0:
-            print(f"Step: {step}/{MAX_ITERS} loss {loss_acc.item() / loss_steps:.3}")
+            print(
+                f"Step: {step}/{MAX_ITERS} loss {loss_acc.item() / loss_steps:.3}")
             loss_acc = 0
             loss_steps = 0
     print("Training done, now generating a sample ")
