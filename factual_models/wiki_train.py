@@ -90,7 +90,7 @@ def eval(model):
     model.eval()
 
 
-if __name__ == "__main__":
+def main():
     fetch_data()
 
     model = bdh.BDH(BDH_CONFIG).to(device)
