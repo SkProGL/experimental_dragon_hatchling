@@ -2,13 +2,13 @@
 
 import os
 from contextlib import nullcontext
-import bdh
 import numpy as np
 import requests
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from template.gpu_support import GPUSupport
+from template import bdh
 
 GPUSupport()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
