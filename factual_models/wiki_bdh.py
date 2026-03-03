@@ -22,11 +22,8 @@ def get_freqs(n, theta, dtype):
     def quantize(t, q=2):
         return (t / q).floor() * q
 
-    return (
-        1.0
-        / (theta ** (quantize(torch.arange(0, n, 1, dtype=dtype)) / n))
-        / (2 * math.pi)
-    )
+    return (1.0 / (theta ** (quantize(torch.arange(0, n, 1, dtype=dtype)) / n))
+            / (2 * math.pi))
 
 
 class Attention(torch.nn.Module):
@@ -49,7 +46,8 @@ class Attention(torch.nn.Module):
 
     @staticmethod
     def rope(phases, v):
-        v_rot = torch.stack((-v[..., 1::2], v[..., ::2]), dim=-1).view(*v.size())
+        v_rot = torch.stack((-v[..., 1::2], v[..., ::2]),
+                            dim=-1).view(*v.size())
         phases_cos, phases_sin = Attention.phases_cos_sin(phases)
         return (v * phases_cos).to(v.dtype) + (v_rot * phases_sin).to(v.dtype)
 
@@ -90,7 +88,8 @@ class BDH(nn.Module):
         self.ln = nn.LayerNorm(D, elementwise_affine=False, bias=False)
         self.embed = nn.Embedding(config.vocab_size, D)
         self.drop = nn.Dropout(config.dropout)
-        self.encoder_v = nn.Parameter(torch.zeros((nh, D, N)).normal_(std=0.02))
+        self.encoder_v = nn.Parameter(
+            torch.zeros((nh, D, N)).normal_(std=0.02))
 
         self.lm_head = nn.Parameter(
             torch.zeros((D, config.vocab_size)).normal_(std=0.02)
@@ -106,7 +105,7 @@ class BDH(nn.Module):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
-    def forward(self, idx, targets=None):
+    def forward(self, idx, targets=None, return_sparsity=False):
         C = self.config
 
         B, T = idx.size()
@@ -118,12 +117,15 @@ class BDH(nn.Module):
 
         # actually helps with training
         x = self.ln(x)  # B, 1, T, D
-
+        if return_sparsity:
+            total_sparsity = torch.tensor(0.0, device=x.device)
         for level in range(C.n_layer):
             x_latent = x @ self.encoder
 
             x_sparse = F.relu(x_latent)  # B, nh, T, N
-
+            if return_sparsity:
+                # zero count / total
+                total_sparsity += (x_sparse == 0).sum() / x_sparse.numel()
             yKV = self.attn(
                 Q=x_sparse,
                 K=x_sparse,
@@ -138,7 +140,8 @@ class BDH(nn.Module):
             xy_sparse = self.drop(xy_sparse)
 
             yMLP = (
-                xy_sparse.transpose(1, 2).reshape(B, 1, T, N * nh) @ self.decoder
+                xy_sparse.transpose(1, 2).reshape(
+                    B, 1, T, N * nh) @ self.decoder
             )  # B, 1, T, D
             y = self.ln(yMLP)
             x = self.ln(x + y)
@@ -146,8 +149,12 @@ class BDH(nn.Module):
         logits = x.view(B, T, D) @ self.lm_head
         loss = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+            loss = F.cross_entropy(
+                logits.view(-1, logits.size(-1)), targets.view(-1))
 
+        if return_sparsity:
+            total_sparsity = total_sparsity / C.n_layer
+            return logits, loss, total_sparsity
         return logits, loss
 
     @torch.no_grad()

@@ -1,11 +1,28 @@
 class GPUSupport:
     def __init__(self):
+        import torch
+        import warnings
+        import torch.nn.functional as F
+        import torch.nn as nn
+        # 1. silence torchdynamo warnings
+        torch._dynamo.config.suppress_errors = True
+        torch._dynamo.config.verbose = 0
+        torch._dynamo.config.suppress_errors = True
+
+        # 2. suppress triton warning
+        warnings.filterwarnings(
+            "ignore", category=UserWarning, module="torch.utils.flop_counter")
+        warnings.filterwarnings(
+            "ignore", category=UserWarning, module="torch._inductor")
+
         # enables cl.exe on windows machine
         import os
 
         VS_ROOT = r"C:\Program Files\Microsoft Visual Studio\2022\Professional"
-        MSVC_VER = os.environ["CUSTOM_MSVC"]
-        WINSDK_VER = os.environ["CUSTOM_WINSDK"]
+        MSVC_VER = os.environ.get("CUSTOM_MSVC")
+        WINSDK_VER = os.environ.get("CUSTOM_WINSDK")
+        if MSVC_VER is None or WINSDK_VER is None:
+            return
 
         print(f"Enabling cl.exe -> MSVC: {MSVC_VER}, WINSDK: {WINSDK_VER}")
 
