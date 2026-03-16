@@ -100,6 +100,78 @@ A3 = RunConfiguration(
     train_weight_decay=0.1,
 )
 
+A4 = RunConfiguration(
+    run="A4",
+    bdh_n_layer=8,
+    bdh_n_embd=384,
+    bdh_n_head=6,
+    bdh_mlp_internal_dim_multiplier=128,
+    train_learning_rate=5e-4,
+    train_batch_size=16,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+A5 = RunConfiguration(
+    run="A5",
+    bdh_n_layer=8,
+    bdh_n_embd=384,
+    bdh_n_head=8,
+    bdh_mlp_internal_dim_multiplier=128,
+    train_learning_rate=5e-4,
+    train_batch_size=16,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+A6 = RunConfiguration(
+    run="A6",
+    bdh_n_layer=8,
+    bdh_n_embd=512,
+    bdh_n_head=8,
+    bdh_mlp_internal_dim_multiplier=128,
+    train_learning_rate=4e-4,
+    train_batch_size=16,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+A7 = RunConfiguration(
+    run="A7",
+    bdh_n_layer=8,
+    bdh_n_embd=512,
+    bdh_n_head=10,
+    bdh_mlp_internal_dim_multiplier=128,
+    train_learning_rate=4e-4,
+    train_batch_size=16,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+A8 = RunConfiguration(
+    run="A8",
+    bdh_n_layer=8,
+    bdh_n_embd=512,
+    bdh_n_head=8,
+    bdh_mlp_internal_dim_multiplier=256,
+    train_learning_rate=4e-4,
+    train_batch_size=16,
+    train_max_iters=12000,
+    train_weight_decay=0.01,
+)
+
+A9 = RunConfiguration(
+    run="A9",
+    bdh_n_layer=8,
+    bdh_n_embd=512,
+    bdh_n_head=8,
+    bdh_mlp_internal_dim_multiplier=256,
+    train_learning_rate=4e-4,
+    train_batch_size=16,
+    train_max_iters=12000,
+    train_weight_decay=0.1,
+)
+
 
 @dataclass
 class EvaluationMetricsConfiguration:
