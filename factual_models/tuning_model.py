@@ -11,7 +11,7 @@ from dataclasses import asdict
 
 
 def save_metrics(metrics):
-    filepath = f"{metrics.run}.json"
+    filepath = f"results/{metrics.run}.json"
     with open(filepath, "w") as f:
         json.dump(asdict(metrics), f, indent=4)
     print(f"Metrics saved to {filepath}")
@@ -57,9 +57,9 @@ CPU = RunConfiguration(
     train_block_size=512,
     train_learning_rate=1e-3,
     train_batch_size=8,
-    train_max_iters=3,
+    train_max_iters=1,
     train_weight_decay=0.1,
-    eval_iters=5,
+    eval_iters=1,
     train_log_freq=1,
 )
 A1 = RunConfiguration(
@@ -201,5 +201,5 @@ class EvaluationMetricsConfiguration:
 #     perplexity=[22.1, 18.3, 16.4],
 #     elapsed_time=1.75,
 # )
-save_metrics(CPU)
-load_metrics('cpu')
+# save_metrics(CPU)
+# load_metrics('cpu')

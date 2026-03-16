@@ -1,4 +1,5 @@
 # Copyright Pathway Technology, Inc.
+from pathlib import Path
 from template.gpu_support import GPUSupport
 from factual_models import wiki_bdh as bdh
 from factual_models import tuning_model
@@ -46,11 +47,13 @@ def save_model(raw_model, configs=[], filename="wiki_model.pt"):
     checkpoint = {
         "model_state_dict": raw_model.state_dict(),
     }
+    Path('results').mkdir(exist_ok=True)
     for i in configs:
         tuning_model.save_metrics(i)
 
-    torch.save(checkpoint, filename)
-    print(f"Model saved as {filename}")
+    model_name = f"{configs[0].run}_{filename}"
+    torch.save(checkpoint, Path('results')/str(model_name))
+    print(f"Model saved as {model_name}")
 
 
 GPUSupport()
