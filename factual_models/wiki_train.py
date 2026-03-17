@@ -101,7 +101,6 @@ LOG_FREQ = run_config.train_log_freq
 # [old] tinyshakespeare
 # input_file_path = os.path.join(os.path.dirname(__file__), "input.txt")
 
-WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
 _wiki_bytes = None
 
 # [old] tinyshakespeare
@@ -113,12 +112,18 @@ _wiki_bytes = None
 #             f.write(requests.get(data_url).text)
 
 
-def load_wiki_bytes():
+def load_dataset():
+
+    # WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
+    TINYSTORIES_PATH = os.path.join(os.path.dirname(
+        __file__), "tinystories/train-00000.parquet")
+    DATASET_PATH = TINYSTORIES_PATH
+
     global _wiki_bytes
     if _wiki_bytes is not None:
         return _wiki_bytes
 
-    df = pd.read_parquet(WIKI_PATH)
+    df = pd.read_parquet(DATASET_PATH)
 
     texts = df["text"].astype(str).tolist()
 
@@ -139,7 +144,7 @@ def get_batch(split):
     # data = np.memmap(input_file_path, dtype=np.uint8, mode="r")
     # [new] wiki
     # treat the file as bytes
-    data = load_wiki_bytes()
+    data = load_dataset()
 
     # training and validation split .9 to .1
     if split == "train":
