@@ -111,31 +111,67 @@ _wiki_bytes = None
 #         with open(input_file_path, "w") as f:
 #             f.write(requests.get(data_url).text)
 
+# def load_wiki():
+#
+#     WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
+#
+#     global _wiki_bytes
+#     if _wiki_bytes is not None:
+#         return _wiki_bytes
+#
+#     df = pd.read_parquet(WIKI_PATH)
+#
+#     texts = df["text"].astype(str).tolist()
+#
+#     # marks document boundaries, helps model learn
+#     full_text = "\n\n<doc>\n\n".join(texts)
+#
+#     # converts string into utf-8 encoded raw bytes,
+#     # then converts to byte-level integer array (0-255)
+#     _wiki_bytes = np.frombuffer(
+#         full_text.encode("utf-8"),
+#         dtype=np.uint8,
+#     )
+#     return _wiki_bytes
 
-def load_dataset():
 
-    # WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
-    TINYSTORIES_PATH = os.path.join(os.path.dirname(
-        __file__), "tinystories/train-00000.parquet")
-    DATASET_PATH = TINYSTORIES_PATH
+def load_tinystories():
+    base_path = os.path.join(os.path.dirname(__file__), "tinystories")
 
     global _wiki_bytes
     if _wiki_bytes is not None:
         return _wiki_bytes
 
-    df = pd.read_parquet(DATASET_PATH)
+    # ---- TRAIN ----
+    train_files = [
+        "train-00000.parquet",
+        "train-00001.parquet",
+        "train-00002.parquet",
+        "train-00003.parquet",
+    ]
 
-    texts = df["text"].astype(str).tolist()
+    dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
+    train_df = pd.concat(dfs, ignore_index=True)
 
-    # marks document boundaries, helps model learn
-    full_text = "\n\n<doc>\n\n".join(texts)
+    train_texts = train_df["text"].astype(str).tolist()
+    train_full = "\n\n<doc>\n\n".join(train_texts)
 
-    # converts string into utf-8 encoded raw bytes,
-    # then converts to byte-level integer array (0-255)
-    _wiki_bytes = np.frombuffer(
-        full_text.encode("utf-8"),
-        dtype=np.uint8,
-    )
+    train_bytes = np.frombuffer(train_full.encode("utf-8"), dtype=np.uint8)
+
+    # ---- VALIDATION ----
+    val_path = os.path.join(base_path, "validation-00000.parquet")
+    val_df = pd.read_parquet(val_path)
+
+    val_texts = val_df["text"].astype(str).tolist()
+    val_full = "\n\n<doc>\n\n".join(val_texts)
+
+    val_bytes = np.frombuffer(val_full.encode("utf-8"), dtype=np.uint8)
+
+    _wiki_bytes = {
+        "train": train_bytes,
+        "val": val_bytes,
+    }
+
     return _wiki_bytes
 
 
@@ -144,13 +180,15 @@ def get_batch(split):
     # data = np.memmap(input_file_path, dtype=np.uint8, mode="r")
     # [new] wiki
     # treat the file as bytes
-    data = load_dataset()
+    data = load_tinystories()[split]
 
+    # data = load_wiki()
+    # NO NEED to split due to separate validation dataset
     # training and validation split .9 to .1
-    if split == "train":
-        data = data[: int(0.9 * len(data))]
-    else:
-        data = data[int(0.9 * len(data)):]
+    # if split == "train":
+    #     data = data[: int(0.9 * len(data))]
+    # else:
+    #     data = data[int(0.9 * len(data)):]
     ix = torch.randint(len(data) - BLOCK_SIZE, (BATCH_SIZE,))
     x = torch.stack(
         [torch.from_numpy((data[i: i + BLOCK_SIZE]).astype(np.int64))
