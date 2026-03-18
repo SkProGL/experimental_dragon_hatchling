@@ -37,7 +37,7 @@ def save_model(raw_model, run_config, metrics, filename=".pt"):
     checkpoint = {"model_state_dict": raw_model.state_dict(), }
     Path('results').mkdir(exist_ok=True)
     tuning_model.save_metrics(run_config, metrics)
-    model_name = f"{run_config.run}_{filename}"
+    model_name = f"{run_config.run}{filename}"
     torch.save(checkpoint, Path('results') / str(model_name))
     print(f"Model saved as {model_name}")
 
