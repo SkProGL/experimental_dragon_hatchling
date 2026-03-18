@@ -1,0 +1,35 @@
+Questions
+1. The capital of France is
+2. The chemical symbol for gold is
+3. The theory of relativity was proposed by
+4. The tallest mountain on Earth is
+5. Water boils at what temperature in degrees Celsius?
+6. The capital of Australia is
+7. Who wrote the novel "1984"?
+8. The largest planet in the Solar System is
+9. The square root of 144 is
+10. The first person to walk on Mars was
+
+Answers
+1. Paris
+2. Au
+3. Albert Einstein
+4. Mount Everest
+5. 100°C (or 100 degrees Celsius)
+6. Canberra
+7. George Orwell
+8. Jupiter
+9. 12
+10. No one — no human has walked on Mars yet
+
+Corrupted questions
+1. France capital the is
+2. Gold for symbol chemical is what
+3. Proposed relativity theory of who
+4. Earth on mountain tallest the is which
+5. Celsius degrees in boils water temperature what
+6. Australia capital is what the
+7. Novel "1984" wrote who the
+8. Solar System planet largest the is which
+9. 144 of square root the is what
+10. Mars on first person walked who was the

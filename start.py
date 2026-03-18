@@ -1,4 +1,5 @@
-from factual_models.wiki_train import main
+# from factual_models.bdh_train import main as bfm
+from factual_models.tf_train import main as tfm
 
 if __name__ == "__main__":
-    main()
+    tfm()

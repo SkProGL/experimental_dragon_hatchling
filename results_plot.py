@@ -2,16 +2,16 @@ import json
 import numpy as np
 import plotly.graph_objects as go
 
-# Load JSON
-# with open("A2_metrics.json", "r") as f:
-name = "A6"
+# load JSON
+name = "A1"
 
 print("| Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations |")
 print("| --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |")
-for i in range(1, 10):
+for i in range(1, 11):
     name = f"A{i}"
     with open(f"results/{name}.json", "r") as f:
-        data = json.load(f)
+        data = json.load(f)['config']
+        # data = json.load(f)
         print(f"| {data['run']} "
               f"| {data['bdh_n_layer']} "
               f"| {data['bdh_n_embd']} "
@@ -26,20 +26,16 @@ print()
 print("| Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |")
 print("| --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |")
 
-for i in range(1, 10):
+for i in range(1, 11):
     name = f"A{i}"
-    with open(f"results/{name}_metrics.json", "r") as f:
-        data = json.load(f)
+    with open(f"results/{name}.json", "r") as f:
+        data = json.load(f)['metrics']
+        # data = json.load(f)
 
         steps = data["steps"]
         train_loss = data["train_loss"]
         val_loss = data["val_loss"]
         perplexity = data["perplexity"]
-
-        # WRONG Calculate averages
-        # train_rep = np.mean(train_loss)
-        # val_rep = np.mean(val_loss)
-        # ppl_rep = np.mean(perplexity)
 
         best_i = np.argmin(val_loss)
 
@@ -64,42 +60,42 @@ title = f"{name} Metrics | "
 f"Avg Training (loss): {train_rep:.4f} | "
 f"Avg Validation (loss): {val_rep:.4f} | "
 f"Avg perplexity: {ppl_rep:.4f}",
-# # Create figure
-# fig = go.Figure()
-#
-# fig.add_trace(go.Scatter(
-#     x=steps, y=train_loss,
-#     mode='lines',
-#     name='Train Loss'
-# ))
-#
-# fig.add_trace(go.Scatter(
-#     x=steps, y=val_loss,
-#     mode='lines',
-#     name='Val Loss'
-# ))
-#
-# fig.add_trace(go.Scatter(
-#     x=steps, y=perplexity,
-#     mode='lines',
-#     name='Perplexity',
-#     yaxis='y2'  # optional secondary axis
-# ))
-#
-# # Layout with secondary y-axis
-# fig.update_layout(
-#     title=f"{name} Metrics | "
-#     f"Avg Training (loss): {train_rep:.4f} | "
-#     f"Avg Validation (loss): {val_rep:.4f} | "
-#     f"Avg perplexity: {ppl_rep:.4f}",
-#     xaxis_title="Steps",
-#     yaxis=dict(title="Loss"),
-#     yaxis2=dict(
-#         title="Perplexity",
-#         overlaying='y',
-#         side='right'
-#     ),
-#     template="plotly_white"
-# )
-#
-# fig.show()
+# create figure
+fig = go.Figure()
+
+fig.add_trace(go.Scatter(
+    x=steps, y=train_loss,
+    mode='lines',
+    name='Train Loss'
+))
+
+fig.add_trace(go.Scatter(
+    x=steps, y=val_loss,
+    mode='lines',
+    name='Val Loss'
+))
+
+fig.add_trace(go.Scatter(
+    x=steps, y=perplexity,
+    mode='lines',
+    name='Perplexity',
+    yaxis='y2'  # optional secondary axis
+))
+
+# Layout with secondary y-axis
+fig.update_layout(
+    title=f"{name} Metrics | "
+    f"Avg Training (loss): {train_rep:.4f} | "
+    f"Avg Validation (loss): {val_rep:.4f} | "
+    f"Avg perplexity: {ppl_rep:.4f}",
+    xaxis_title="Steps",
+    yaxis=dict(title="Loss"),
+    yaxis2=dict(
+        title="Perplexity",
+        overlaying='y',
+        side='right'
+    ),
+    template="plotly_white"
+)
+
+fig.show()

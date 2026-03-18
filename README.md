@@ -7,7 +7,9 @@ https://github.com/pathwaycom/bdh
 3. Train longer
 4. Compare perplexity
 5. Only then experiment with LoRA
-#### 1.0 invariant model components
+
+# English-WIKI dataset
+### 1.0 invariant model components
 Training only
 | Loss Function | Dropout |
 |---------------|---------|
@@ -25,13 +27,9 @@ Training & inference
 
 NOTE: Batch size is dynamically adjusted per run based on available GPU memory and effective utilization, rather than being fixed across experiments.
 
-Following tables will be used for accurate model training
+### 1.1 Single GPU testing
 
-#### 1.1 Single GPU testing
-
-
-Dropout is always 0.1
-#### Tunable hyperparameters
+##### Tunable hyperparameters
 
 | Run | Layers | Emb | Heads | MLP Mult | LR   | Batch | Weight Decay | Iterations |
 | --- | ------ | --- | ----- | -------- | ---- | ----- | ------------ | ----- |
@@ -40,7 +38,7 @@ Dropout is always 0.1
 | A3   | 12     | 512 | 8     | 64       | 3e-4 | 2    | 0.1          | 20k   |
 
 
-#### Evaluation metrics (model output)
+##### Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
 | A1 | 1.22 | 1.17 | 3.22 | 0.835 | 16384 | 31m |
@@ -49,8 +47,8 @@ Dropout is always 0.1
 
 Pick best run based on validation loss, but mention compute cost and diminishing returns.
 
-#### 1.2 Follow-up sweep (informed by initial results)
-#### Tunable hyperparameters
+### 1.2 Follow-up sweep (informed by initial results)
+##### Tunable hyperparameters
 
 | Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations | 
 | --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |
@@ -61,7 +59,7 @@ Pick best run based on validation loss, but mention compute cost and diminishing
 | A8 | 8 | 512 | 8 | 256 | 4e-4 | 1 | 0.01 | 12k |
 | A9 | 8 | 512 | 8 | 256 | 4e-4 | 1 | 0.1 | 12k |
 
-#### Evaluation metrics (model output)
+##### Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
 | A4 | 1.30 | 1.19 | 3.27 | 0.872 | 49152 | 57m |
@@ -74,17 +72,22 @@ Pick best run based on validation loss, but mention compute cost and diminishing
 
 Pick best run based on validation loss, but mention compute cost and diminishing returns.
 
-#### Optimization Sweep (on best model)
-| Run | LR   | Batch | Weight Decay | Iterations |
-| --- | ---- | ----- | ------------ | ----- |
-| A7  | 3e-4 | 16    | 0.01         | Y     |
-| A8  | 3e-4 | 16    | 0.05         | Y     |
-| A9  | 5e-4 | 16    | 0.05         | Y     |
-| A10 | 3e-4 | 16    | 0.05         | Y     |
+##### Optimization Sweep (on best model)
+
+A10 is based on best run A2 hyperparameters, only with increased number of iterations
+
+| Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations | 
+| --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |
+| A10 | 8 | 384 | 6 | 64 | 5e-04 | 4 | 0.1 | 30k |
+
+
+##### Evaluation metrics (model output)
+| Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
+| --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
+| A10 | 1.03 | 0.95 | 2.57 | 0.877 | 24576 | 2h 16m |
 
 
 Compare & monitor logits, with Transformer model
-
 
 Where it would be applicable and answer research question
 What could be optimized?

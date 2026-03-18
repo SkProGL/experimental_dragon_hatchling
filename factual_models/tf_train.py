@@ -2,7 +2,7 @@
 from pathlib import Path
 from template.gpu_support import GPUSupport
 from factual_models import tuning_model
-from factual_models.wiki_transformer import TransformerA1
+from factual_models.tf_model import Transformer
 
 import math
 import copy
@@ -13,8 +13,8 @@ import torch
 import pandas as pd
 
 
-# SPECIFY HERE THE RUN CONFIG (reuse A1 etc.)
-run_config = tuning_model.CPU
+# SPECIFY HERE THE RUN CONFIG
+run_config = tuning_model.interact('transformer')
 metrics = tuning_model.EvaluationMetricsConfiguration(
     run=f"{run_config.run}_transformer_metrics"
 )
@@ -33,15 +33,11 @@ def estimate_val_loss(model, eval_iters=2):
     return sum(losses) / len(losses)
 
 
-def save_model(raw_model, configs=[], filename="wiki_transformer.pt"):
-    checkpoint = {
-        "model_state_dict": raw_model.state_dict(),
-    }
+def save_model(raw_model, run_config, metrics, filename=".pt"):
+    checkpoint = {"model_state_dict": raw_model.state_dict(), }
     Path('results').mkdir(exist_ok=True)
-    for i in configs:
-        tuning_model.save_metrics(i)
-
-    model_name = f"{configs[0].run}_{filename}"
+    tuning_model.save_metrics(run_config, metrics)
+    model_name = f"{run_config.run}_{filename}"
     torch.save(checkpoint, Path('results') / str(model_name))
     print(f"Model saved as {model_name}")
 
@@ -92,10 +88,10 @@ _wiki_bytes = None
 
 def load_dataset():
 
-    # WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
-    TINYSTORIES_PATH = os.path.join(os.path.dirname(
-        __file__), "tinystories/train-00000.parquet")
-    DATASET_PATH = TINYSTORIES_PATH
+    WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
+    # TINYSTORIES_PATH = os.path.join(os.path.dirname(
+    #     __file__), "tinystories/train-00000.parquet")
+    DATASET_PATH = WIKI_PATH
 
     global _wiki_bytes
     if _wiki_bytes is not None:
@@ -151,7 +147,7 @@ def main():
     import time
     start_time = time.time()
 
-    model = TransformerA1().to(device)
+    model = Transformer().to(device)
     model = torch.compile(model)
 
     optimizer = torch.optim.AdamW(
@@ -209,7 +205,7 @@ def main():
     metrics.elapsed_time = (time.time() - start_time) / 60
     metrics.perplexity = metrics.calculate_perplexity(metrics.val_loss)
 
-    save_model(model, [run_config, metrics])
+    save_model(model, run_config, metrics)
 
     print("Training done, now generating a sample")
 

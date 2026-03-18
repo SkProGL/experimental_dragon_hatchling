@@ -1,7 +1,7 @@
 # Copyright Pathway Technology, Inc.
 from pathlib import Path
 from template.gpu_support import GPUSupport
-from factual_models import wiki_bdh as bdh
+from factual_models import bdh_model as bdh
 from factual_models import tuning_model
 import math
 import copy
@@ -13,7 +13,8 @@ import torch
 import pandas as pd
 
 # SPECIFY HERE THE RUN CONFIG (e.g. A1, A2)
-run_config = tuning_model.CPU
+run_config = tuning_model.interact()
+
 metrics = tuning_model.EvaluationMetricsConfiguration(
     run=f"{run_config.run}_metrics")
 print(f"\033[43m\033[30m{run_config}\033[0m")
@@ -43,15 +44,11 @@ def estimate_val_loss(model, eval_iters=2):
     return sum(losses) / len(losses)
 
 
-def save_model(raw_model, configs=[], filename="wiki_model.pt"):
-    checkpoint = {
-        "model_state_dict": raw_model.state_dict(),
-    }
+def save_model(raw_model, run_config, metrics, filename=".pt"):
+    checkpoint = {"model_state_dict": raw_model.state_dict(), }
     Path('results').mkdir(exist_ok=True)
-    for i in configs:
-        tuning_model.save_metrics(i)
-
-    model_name = f"{configs[0].run}_{filename}"
+    tuning_model.save_metrics(run_config, metrics)
+    model_name = f"{run_config.run}{filename}"
     torch.save(checkpoint, Path('results')/str(model_name))
     print(f"Model saved as {model_name}")
 
@@ -224,17 +221,13 @@ def main():
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
-
     x, y = get_batch("train")
-
     loss_acc = 0
     loss_steps = 0
-
     best_val_loss = float("inf")
     best_model_state = None
     for step in range(MAX_ITERS):
         with ctx:
-
             if step % LOG_FREQ == 0:
                 logits, loss, sparsity = model(x, y, return_sparsity=True)
                 metrics.sparsity_ratio = sparsity.item()
@@ -262,18 +255,16 @@ def main():
                 f"train {avg_train_loss:.3f} | "
                 f"val {val_loss:.3f}"
             )
-
             metrics.steps.append(step)
             metrics.train_loss.append(avg_train_loss)
             metrics.val_loss.append(val_loss)
-
             loss_acc = 0
             loss_steps = 0
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
     metrics.elapsed_time = (time.time() - start_time) / 60
     metrics.perplexity = metrics.calculate_perplexity(metrics.val_loss)
-    save_model(model, [run_config, metrics])
+    save_model(model, run_config, metrics)
     print("Training done, now generating a sample ")
     model.eval()
     prompt_text = "Gravity\n\nGravity is"
