@@ -32,7 +32,7 @@ def interact(model_type="bdh"):
                 f"{i}: {r.run}, L={r.bdh_n_layer}, D={r.bdh_n_embd}, H={r.bdh_n_head}, BATCH_SIZE={r.train_batch_size}")
 
     elif model_type == "transformer":
-        runs = [BCPU, B1]  # extend later if needed
+        runs = [BCPU] + [globals()[f"B{i}"] for i in range(1, 10)]
 
         for i, r in enumerate(runs):
             print(
@@ -43,7 +43,8 @@ def interact(model_type="bdh"):
 
     try:
         r = runs[int(input("Select: "))]
-        r.train_batch_size = int(input("Batch size: "))
+        size = input("Batch size: ")
+        r.train_batch_size = int(size) if size else r.train_batch_size
         return r
     except:
         return runs[0]
@@ -277,7 +278,103 @@ B1 = TransformerConfiguration(
     tf_n_head=4,
     tf_mlp_mult=64,
     train_learning_rate=1e-3,
-    train_batch_size=16,
+    train_batch_size=32,
     train_max_iters=6000,
+    train_weight_decay=0.1,
+)
+
+B2 = TransformerConfiguration(
+    run="B2",
+    tf_n_layer=8,
+    tf_d_model=384,
+    tf_n_head=6,
+    tf_mlp_mult=64,
+    train_learning_rate=5e-4,
+    train_batch_size=32,
+    train_max_iters=12000,
+    train_weight_decay=0.1,
+)
+
+B3 = TransformerConfiguration(
+    run="B3",
+    tf_n_layer=12,
+    tf_d_model=512,
+    tf_n_head=8,
+    tf_mlp_mult=64,
+    train_learning_rate=3e-4,
+    train_batch_size=32,
+    train_max_iters=20000,
+    train_weight_decay=0.1,
+)
+
+B4 = TransformerConfiguration(
+    run="B4",
+    tf_n_layer=8,
+    tf_d_model=384,
+    tf_n_head=6,
+    tf_mlp_mult=128,
+    train_learning_rate=5e-4,
+    train_batch_size=32,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+B5 = TransformerConfiguration(
+    run="B5",
+    tf_n_layer=8,
+    tf_d_model=384,
+    tf_n_head=8,
+    tf_mlp_mult=128,
+    train_learning_rate=5e-4,
+    train_batch_size=32,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+B6 = TransformerConfiguration(
+    run="B6",
+    tf_n_layer=8,
+    tf_d_model=512,
+    tf_n_head=8,
+    tf_mlp_mult=128,
+    train_learning_rate=4e-4,
+    train_batch_size=32,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+B7 = TransformerConfiguration(
+    run="B7",
+    tf_n_layer=8,
+    tf_d_model=512,
+    tf_n_head=10,
+    tf_mlp_mult=128,
+    train_learning_rate=4e-4,
+    train_batch_size=32,
+    train_max_iters=12000,
+    train_weight_decay=0.05,
+)
+
+B8 = TransformerConfiguration(
+    run="B8",
+    tf_n_layer=8,
+    tf_d_model=512,
+    tf_n_head=8,
+    tf_mlp_mult=256,
+    train_learning_rate=4e-4,
+    train_batch_size=32,
+    train_max_iters=12000,
+    train_weight_decay=0.01,
+)
+
+B9 = TransformerConfiguration(
+    run="B9",
+    tf_n_layer=8,
+    tf_d_model=512,
+    tf_n_head=8,
+    tf_mlp_mult=256,
+    train_learning_rate=4e-4,
+    train_batch_size=32,
+    train_max_iters=12000,
     train_weight_decay=0.1,
 )
