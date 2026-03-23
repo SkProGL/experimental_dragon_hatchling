@@ -78,8 +78,8 @@ class DragonConfiguration:
     train_learning_rate: float = 1e-3
     train_weight_decay: float = 0.1
     train_log_freq: int = 100
-
     eval_iters: int = 10
+    model_type: str = "dragon_hatchling"
 
 
 @dataclass
@@ -102,6 +102,7 @@ class TransformerConfiguration:
     train_log_freq: int = 100
 
     eval_iters: int = 10
+    model_type: str = "transformer"
 
 
 @dataclass
@@ -215,7 +216,7 @@ A7 = DragonConfiguration(
     run="A7",
     bdh_n_layer=8,
     bdh_n_embd=512,
-    bdh_n_head=10,
+    bdh_n_head=16,
     bdh_mlp_internal_dim_multiplier=128,
     train_learning_rate=4e-4,
     train_batch_size=16,
@@ -347,7 +348,7 @@ B7 = TransformerConfiguration(
     run="B7",
     tf_n_layer=8,
     tf_d_model=512,
-    tf_n_head=10,
+    tf_n_head=16,
     tf_mlp_mult=128,
     train_learning_rate=4e-4,
     train_batch_size=32,
