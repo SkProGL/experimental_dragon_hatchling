@@ -42,7 +42,7 @@ def save_model(raw_model, run_config, metrics, filename=".pt"):
     print(f"Model saved as {model_name}")
 
 
-# ---------- GPU / precision setup ----------
+# GPU / precision setup
 GPUSupport()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -73,7 +73,7 @@ torch.backends.cudnn.allow_tf32 = True
 print(f"Using device: {device} with dtype {dtype}")
 
 
-# ---------- Training config ----------
+# Training config
 BLOCK_SIZE = run_config.train_block_size
 BATCH_SIZE = run_config.train_batch_size
 MAX_ITERS = run_config.train_max_iters
@@ -82,7 +82,7 @@ WEIGHT_DECAY = run_config.train_weight_decay
 LOG_FREQ = run_config.train_log_freq
 
 
-# ---------- Dataset ----------
+# Dataset
 _wiki_bytes = None
 
 
@@ -113,13 +113,38 @@ def load_dataset():
     return _wiki_bytes
 
 
-def get_batch(split):
-    data = load_dataset()
+def load_tinystories(split):
+    base_path = os.path.join(os.path.dirname(__file__), "tinystories")
 
     if split == "train":
-        data = data[: int(0.9 * len(data))]
+        train_files = [
+            "train-00000.parquet",
+            "train-00001.parquet",
+            "train-00002.parquet",
+            "train-00003.parquet",
+        ]
+        dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
+        df = pd.concat(dfs, ignore_index=True)
     else:
-        data = data[int(0.9 * len(data)):]
+        df = pd.read_parquet(os.path.join(base_path, "validation-00000.parquet"))
+
+    texts = df["text"].astype(str).tolist()
+    full_text = "\n\n<doc>\n\n".join(texts)
+
+    return np.frombuffer(
+        full_text.encode("utf-8"),
+        dtype=np.uint8,
+    )
+
+
+def get_batch(split):
+    # data = load_dataset()
+    data = load_tinystories(split)
+
+    # if split == "train":
+    #     data = data[: int(0.9 * len(data))]
+    # else:
+    #     data = data[int(0.9 * len(data)):]
 
     ix = torch.randint(len(data) - BLOCK_SIZE, (BATCH_SIZE,))
 
@@ -142,7 +167,7 @@ def get_batch(split):
     return x, y
 
 
-# ---------- Training ----------
+# Training
 def main():
     import time
     start_time = time.time()

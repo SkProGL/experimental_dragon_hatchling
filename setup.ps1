@@ -11,4 +11,4 @@ echo "[python] initializing model"
 # explorer.exe factual_models;
 python start.py
 C:\Users\g2-leonovs\repo\remote-main\rclone\rclone.exe copy results gdrive:results
-timeout /t 20; shutdown /l
+timeout /t 60; shutdown /l
