@@ -88,7 +88,8 @@ _wiki_bytes = None
 
 def load_dataset():
 
-    WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
+    WIKI_PATH = os.path.join(os.path.dirname(
+        __file__), "simple-wikipedia.parquet")
     # TINYSTORIES_PATH = os.path.join(os.path.dirname(
     #     __file__), "tinystories/train-00000.parquet")
     DATASET_PATH = WIKI_PATH
@@ -113,33 +114,70 @@ def load_dataset():
     return _wiki_bytes
 
 
-def load_tinystories(split):
+_data_cache = None
+
+
+def load_tinystories():
+    global _data_cache
+    if _data_cache is not None:
+        return _data_cache
+
     base_path = os.path.join(os.path.dirname(__file__), "tinystories")
 
-    if split == "train":
-        train_files = [
-            "train-00000.parquet",
-            "train-00001.parquet",
-            "train-00002.parquet",
-            "train-00003.parquet",
-        ]
-        dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
-        df = pd.concat(dfs, ignore_index=True)
-    else:
-        df = pd.read_parquet(os.path.join(base_path, "validation-00000.parquet"))
+    # TRAIN
+    train_files = [
+        "train-00000.parquet",
+        "train-00001.parquet",
+        "train-00002.parquet",
+        "train-00003.parquet",
+    ]
+    dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
+    train_df = pd.concat(dfs, ignore_index=True)
 
-    texts = df["text"].astype(str).tolist()
-    full_text = "\n\n<doc>\n\n".join(texts)
+    train_texts = train_df["text"].astype(str).tolist()
+    train_full = "\n\n<doc>\n\n".join(train_texts)
+    train_bytes = np.frombuffer(train_full.encode("utf-8"), dtype=np.uint8)
 
-    return np.frombuffer(
-        full_text.encode("utf-8"),
-        dtype=np.uint8,
-    )
+    # VAL
+    val_df = pd.read_parquet(os.path.join(
+        base_path, "validation-00000.parquet"))
+    val_texts = val_df["text"].astype(str).tolist()
+    val_full = "\n\n<doc>\n\n".join(val_texts)
+    val_bytes = np.frombuffer(val_full.encode("utf-8"), dtype=np.uint8)
+
+    _data_cache = {
+        "train": train_bytes,
+        "val": val_bytes,
+    }
+
+    return _data_cache
+# def load_tinystories(split):
+#     base_path = os.path.join(os.path.dirname(__file__), "tinystories")
+#
+#     if split == "train":
+#         train_files = [
+#             "train-00000.parquet",
+#             "train-00001.parquet",
+#             "train-00002.parquet",
+#             "train-00003.parquet",
+#         ]
+#         dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
+#         df = pd.concat(dfs, ignore_index=True)
+#     else:
+#         df = pd.read_parquet(os.path.join(base_path, "validation-00000.parquet"))
+#
+#     texts = df["text"].astype(str).tolist()
+#     full_text = "\n\n<doc>\n\n".join(texts)
+#
+#     return np.frombuffer(
+#         full_text.encode("utf-8"),
+#         dtype=np.uint8,
+#     )
 
 
 def get_batch(split):
     # data = load_dataset()
-    data = load_tinystories(split)
+    data = load_tinystories()[split]
 
     # if split == "train":
     #     data = data[: int(0.9 * len(data))]
