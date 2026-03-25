@@ -42,14 +42,11 @@ Training & inference
 
 NOTE: Batch size is dynamically adjusted per run based on available GPU memory and effective utilization, rather than being fixed across experiments.
 
-### 1.1 Initial sweep
-
-##### Tunable hyperparameters
+### 1.1 Initial sweep and follow-up sweep (informed by initial results)
 
 Pick best run based on validation loss, but mention compute cost and diminishing returns.
 
-### 1.2 Follow-up sweep (informed by initial results)
-##### Tunable hyperparameters
+##### (BDH) Tunable hyperparameters
 
 | Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations | 
 | --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |
@@ -64,7 +61,7 @@ Pick best run based on validation loss, but mention compute cost and diminishing
 | A9 | 8 | 512 | 8 | 256 | 4e-4 | 1 | 0.1 | 12k |
 | A10 | 8 | 384 | 6 | 64 | 5e-04 | 4 | 0.1 | 30k |
 
-##### Evaluation metrics (model output)
+##### (BDH) Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
 | A1 | 1.22 | 1.17 | 3.22 | 0.835 | 16384 | 31m |
@@ -87,8 +84,7 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 
 
 
-### 1.3 Transformer run on same parameters
-##### Tunable hyperparameters
+##### (TF) Tunable hyperparameters
 | Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations |
 | --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |
 | B1 | 6 | 256 | 4 | 64 | 1e-03 | 8 | 0.1 | 6k |
@@ -101,7 +97,7 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | B8 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.01 | 12k |
 | B9 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.1 | 12k |
 
-##### Evaluation metrics (model output)
+##### (TF) Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
 | B1 | 1.23 | 1.14 | 3.12 | - | - | 2m |
@@ -116,7 +112,9 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 
 
 # TinyStories dataset
-# BDH
+
+### 2.1 BDH run on same parameters
+##### (BDH) Tunable hyperparameters
 | Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations |
 | --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |
 | C1 | 6 | 256 | 4 | 64 | 1e-03 | 8 | 0.1 | 6k |
@@ -129,6 +127,7 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | C8 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.01 | 12k |
 | C9 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.1 | 12k |
 
+##### (BDH) Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
 | C1 | 0.73 | 0.69 | 2.00 | 0.827 | 16384 | 24m |
@@ -142,3 +141,30 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | C9 | 0.85 | 0.78 | 2.19 | 0.882 | 131072 | 1h 28m |
 
 
+### 2.2 Transformer run on same parameters
+##### (TF) Tunable hyperparameters
+
+| Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations |
+| --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |
+| D1 | 6 | 256 | 4 | 64 | 1e-03 | 8 | 0.1 | 6k |
+| D2 | 8 | 384 | 6 | 64 | 5e-04 | 4 | 0.1 | 12k |
+| D3 | 12 | 512 | 8 | 64 | 3e-04 | 2 | 0.1 | 20k |
+| D4 | 8 | 384 | 6 | 128 | 5e-04 | 2 | 0.05 | 12k |
+| D5 | 8 | 384 | 8 | 128 | 5e-04 | 2 | 0.05 | 12k |
+| D6 | 8 | 512 | 8 | 128 | 4e-04 | 2 | 0.05 | 12k |
+| D7 | 8 | 512 | 16 | 128 | 4e-04 | 2 | 0.05 | 12k |
+| D8 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.01 | 12k |
+| D9 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.1 | 12k |
+
+##### (TF) Evaluation metrics (model output)
+| Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
+| --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
+| D1 | 0.79 | 0.73 | 2.08 | - | - | 2m |
+| D2 | 0.77 | 0.72 | 2.05 | - | - | 4m |
+| D3 | 0.88 | 0.75 | 2.11 | - | - | 6m |
+| D4 | 0.88 | 0.78 | 2.18 | - | - | 4m |
+| D5 | 0.88 | 0.78 | 2.18 | - | - | 3m |
+| D6 | 0.89 | 0.78 | 2.19 | - | - | 3m |
+| D7 | 0.89 | 0.78 | 2.19 | - | - | 4m |
+| D8 | 0.98 | 0.84 | 2.33 | - | - | 4m |
+| D9 | 0.99 | 0.85 | 2.34 | - | - | 3m |
