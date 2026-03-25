@@ -72,7 +72,7 @@ def print_markdown_table(prompt, output):
     print(f"| {safe_prompt} | {safe_output} |")
 
 
-if __name__ == "__main__":
+def main():
     print(f"Loading model: {run_config.run}")
 
     model = load_model()
