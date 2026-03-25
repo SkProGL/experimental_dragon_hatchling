@@ -1,14 +1,17 @@
 import torch
+from template.gpu_support import GPUSupport
 from pathlib import Path
-
 from factual_models import bdh_model as bdh
 from factual_models import tuning_model
 
 # select run config
-run_config = tuning_model.A4  # 👈 use A4 directly
+run_config = tuning_model.interact()
 
-MODEL_PATH = Path(f"results/{run_config.run}.pt")
+#     os.path.join(os.path.dirname(__file__), f"inference/{run_config.run}")
+MODEL_PATH = Path(__file__).parent / "inference" / f"{run_config.run}.pt"
+print(f"\033[43m\033[30m{run_config}\033[0m")
 
+GPUSupport()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
