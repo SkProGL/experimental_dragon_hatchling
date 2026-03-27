@@ -269,6 +269,17 @@ A10 = DragonConfiguration(
     train_weight_decay=0.1,
 )
 
+B2 = TransformerConfiguration(
+    run="B2",
+    tf_n_layer=8,
+    tf_d_model=384,
+    tf_n_head=6,
+    tf_mlp_mult=64,
+    train_learning_rate=5e-4,
+    train_batch_size=4,
+    train_max_iters=12000,
+    train_weight_decay=0.1,
+)
 
 DCPU = TransformerConfiguration(
     run="cpu",
