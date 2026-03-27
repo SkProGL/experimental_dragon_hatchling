@@ -1,7 +1,7 @@
 import torch
 from template.gpu_support import GPUSupport
 from pathlib import Path
-from factual_models import bdh_model as bdh
+from factual_models import transformer_model as tf_model
 from factual_models import tuning_model
 
 print("Available model files:")
@@ -11,7 +11,7 @@ for path in sorted(model_dir.iterdir()):
         print(path.name)
 
 # select run config
-run_config = tuning_model.interact()
+run_config = tuning_model.interact('transformer')
 
 #     os.path.join(os.path.dirname(__file__), f"inference/{run_config.run}")
 MODEL_PATH = Path(__file__).parent / "models" / f"{run_config.run}.pt"
@@ -22,21 +22,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # build model config from run config
-def build_bdh_config(run_config):
-    return bdh.BDHConfig(
-        n_layer=run_config.bdh_n_layer,
-        n_embd=run_config.bdh_n_embd,
-        dropout=run_config.bdh_dropout,
-        n_head=run_config.bdh_n_head,
-        mlp_internal_dim_multiplier=run_config.bdh_mlp_internal_dim_multiplier,
-        vocab_size=run_config.bdh_vocab_size,
+def build_transformer_config(run_config):
+    return tf_model.TransformerConfig(
+        n_layer=run_config.tf_n_layer,
+        d_model=run_config.tf_d_model,
+        dropout=run_config.tf_dropout,
+        n_head=run_config.tf_n_head,
+        mlp_mult=run_config.tf_mlp_mult,
+        vocab_size=run_config.tf_vocab_size,
     )
 
 
 def load_model():
-    config = build_bdh_config(run_config)
-
-    model = bdh.BDH(config).to(device)
+    config = build_transformer_config(run_config)
+    model = tf_model.Transformer(config).to(device)
 
     checkpoint = torch.load(MODEL_PATH, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])

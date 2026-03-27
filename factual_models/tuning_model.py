@@ -25,14 +25,23 @@ def load_metrics(run_name):
 
 def interact(model_type="bdh"):
     if model_type == "bdh":
-        runs = [ACPU] + [globals()[f"A{i}"] for i in range(1, 11)]
+        runs = [
+            globals()[name]
+            for name in sorted(globals())
+            if name == "ACPU" or (name.startswith("A") and name[1:].isdigit())
+        ]
 
         for i, r in enumerate(runs):
             print(
                 f"{i}: {r.run}, L={r.bdh_n_layer}, D={r.bdh_n_embd}, H={r.bdh_n_head}, BATCH_SIZE={r.train_batch_size}")
 
     elif model_type == "transformer":
-        runs = [DCPU] + [globals()[f"D{i}"] for i in range(1, 10)]
+        # runs = [DCPU] + [globals()[f"D{i}"] for i in range(1, 10)]
+        runs = [
+            globals()[name]
+            for name in sorted(globals())
+            if name == "BCPU" or (name.startswith("B") and name[1:].isdigit())
+        ]
 
         for i, r in enumerate(runs):
             print(
