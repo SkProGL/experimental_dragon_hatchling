@@ -96,14 +96,55 @@ def print_markdown_table(prompt, output):
     print(f"| {safe_prompt} | {safe_output} |")
 
 
+def run_questions_from_file(filepath, model):
+    rows = []
+
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+
+    # extract only the "Questions" section
+    in_questions = False
+    for line in lines:
+        line = line.strip()
+
+        if line == "Questions":
+            in_questions = True
+            continue
+        if line == "Answers":
+            break
+
+        if in_questions and line:
+            # remove numbering like "1. "
+            question = line.split(".", 1)[-1].strip()
+
+            result = generate_text(model, question)
+            rows.append((question, result))
+
+    # print table
+    print("\n| Prompt | Output |")
+    print("|--------|--------|")
+
+    counter = 1
+    for prompt, output in rows:
+        safe_prompt = prompt.replace("|", "\\|").replace("<br>", "\n")
+        safe_output = output.replace("|", "\\|").replace("<br>", "\n")
+
+        print(f"| {safe_prompt} | {safe_output[len(safe_prompt):]} |")
+        # print(f"{counter} | {safe_output} |")
+        counter += 1
+
+
 def main():
     print(f"Loading model: {run_config.run}")
 
+    DATA_PATH = Path(__file__).parent / "inference" / f"wiki.txt"
     model = load_model()
 
-    prompt = "Gravity\n\nGravity is"
-    result = generate_text(model, prompt)
+    # prompt = "Gravity\n\nGravity is"
+    # result = generate_text(model, prompt)
+
+    run_questions_from_file(DATA_PATH, model)
 
     # print("\n=== GENERATED TEXT ===\n")
     # print(result)
-    print_markdown_table(prompt, result)
+    # print_markdown_table(prompt, result)

@@ -96,6 +96,7 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | B7 | 8 | 512 | 16 | 128 | 4e-04 | 2 | 0.05 | 12k |
 | B8 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.01 | 12k |
 | B9 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.1 | 12k |
+| B10 | 8 | 384 | 6 | 64 | 5e-04 | 4 | 0.1 | 30k |
 
 ##### (TF) Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
@@ -109,6 +110,7 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | B7 | 1.32 | 1.22 | 3.39 | - | - | 3m |
 | B8 | 1.46 | 1.31 | 3.70 | - | - | 3m |
 | B9 | 1.51 | 1.39 | 4.03 | - | - | 3m |
+| B10 | 1.14 | 0.96 | 2.60 | - | - | 9m |
 
 
 # TinyStories dataset

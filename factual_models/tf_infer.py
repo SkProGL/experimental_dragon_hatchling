@@ -1,7 +1,7 @@
 import torch
 from template.gpu_support import GPUSupport
 from pathlib import Path
-from factual_models import transformer_model as tf_model
+from factual_models import tf_model
 from factual_models import tuning_model
 
 print("Available model files:")
@@ -23,7 +23,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # build model config from run config
 def build_transformer_config(run_config):
-    return tf_model.TransformerConfig(
+    return tf_model.Transformer(
         n_layer=run_config.tf_n_layer,
         d_model=run_config.tf_d_model,
         dropout=run_config.tf_dropout,
@@ -32,31 +32,28 @@ def build_transformer_config(run_config):
         vocab_size=run_config.tf_vocab_size,
     )
 
-# def load_model():
-#     config = build_bdh_config(run_config)
-#
-#     model = bdh.BDH(config).to(device)
-#     # model = torch.compile(model)
-#
-#     state_dict = torch.load(MODEL_PATH, map_location=device)["model_state_dict"]
-#
-#     # fix: remove "_orig_mod." prefix
-#     new_state_dict = {k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
-#     model.load_state_dict(new_state_dict)
-#
-#     model.eval()
-#     return model
-
 
 def load_model():
-    config = build_transformer_config(run_config)
-    model = tf_model.Transformer(config).to(device)
+    model = tf_model.Transformer(
+        n_layer=run_config.tf_n_layer,
+        d_model=run_config.tf_d_model,
+        dropout=run_config.tf_dropout,
+        n_head=run_config.tf_n_head,
+        mlp_mult=run_config.tf_mlp_mult,
+        vocab_size=run_config.tf_vocab_size,
+    ).to(device)
 
     # checkpoint = torch.load(MODEL_PATH, map_location=device)
     # model.load_state_dict(checkpoint["model_state_dict"])
 
     state_dict = torch.load(MODEL_PATH, map_location=device)[
         "model_state_dict"]
+    # ckpt = torch.load(MODEL_PATH, map_location="cpu")
+    # print(list(ckpt["model_state_dict"].keys())[:5])
+    #
+    # for k, v in ckpt["model_state_dict"].items():
+    #     print(k, v.shape)
+    #     break
 
     # fix: remove "_orig_mod." prefix
     new_state_dict = {k.replace("_orig_mod.", ""):
@@ -100,14 +97,55 @@ def print_markdown_table(prompt, output):
     print(f"| {safe_prompt} | {safe_output} |")
 
 
+def run_questions_from_file(filepath, model):
+    rows = []
+
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+
+    # extract only the "Questions" section
+    in_questions = False
+    for line in lines:
+        line = line.strip()
+
+        if line == "Questions":
+            in_questions = True
+            continue
+        if line == "Answers":
+            break
+
+        if in_questions and line:
+            # remove numbering like "1. "
+            question = line.split(".", 1)[-1].strip()
+
+            result = generate_text(model, question)
+            rows.append((question, result))
+
+    # print table
+    print("\n| Prompt | Output |")
+    print("|--------|--------|")
+
+    counter = 1
+    for prompt, output in rows:
+        safe_prompt = prompt.replace("|", "\\|").replace("<br>", "\n")
+        safe_output = output.replace("|", "\\|").replace("<br>", "\n")
+
+        print(f"| {safe_prompt} | {safe_output[len(safe_prompt):]} |")
+        # print(f"{counter} | {safe_output} |")
+        counter += 1
+
+
 def main():
     print(f"Loading model: {run_config.run}")
 
+    DATA_PATH = Path(__file__).parent / "inference" / f"wiki.txt"
     model = load_model()
 
-    prompt = "Gravity\n\nGravity is"
-    result = generate_text(model, prompt)
+    # prompt = "Gravity\n\nGravity is"
+    # result = generate_text(model, prompt)
+
+    run_questions_from_file(DATA_PATH, model)
 
     # print("\n=== GENERATED TEXT ===\n")
     # print(result)
-    print_markdown_table(prompt, result)
+    # print_markdown_table(prompt, result)
