@@ -35,14 +35,32 @@ def build_bdh_config(run_config):
 
 def load_model():
     config = build_bdh_config(run_config)
-
     model = bdh.BDH(config).to(device)
 
-    checkpoint = torch.load(MODEL_PATH, map_location=device)
-    model.load_state_dict(checkpoint["model_state_dict"])
+    # checkpoint = torch.load(MODEL_PATH, map_location=device)
+    # model.load_state_dict(checkpoint["model_state_dict"])
+
+    state_dict = torch.load(MODEL_PATH, map_location=device)[
+        "model_state_dict"]
+
+    # fix: remove "_orig_mod." prefix
+    new_state_dict = {k.replace("_orig_mod.", ""):
+                      v for k, v in state_dict.items()}
+    model.load_state_dict(new_state_dict)
 
     model.eval()
     return model
+
+# def load_model():
+#     config = build_bdh_config(run_config)
+#
+#     model = bdh.BDH(config).to(device)
+#
+#     checkpoint = torch.load(MODEL_PATH, map_location=device)
+#     model.load_state_dict(checkpoint["model_state_dict"])
+#
+#     model.eval()
+#     return model
 
 
 # generation
