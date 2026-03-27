@@ -1,6 +1,6 @@
 # $data = "tinystories"
 $data = "models"
-$eval_type ="infer" 
+$eval_type ="itf" 
 $arg = if ([string]::IsNullOrWhiteSpace($args[0])) { $eval_type } else { $args[0] }
 
 if (-not (Test-Path -Path $data)) {
