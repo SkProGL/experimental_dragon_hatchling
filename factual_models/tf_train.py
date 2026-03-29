@@ -2,6 +2,7 @@
 from pathlib import Path
 from template.gpu_support import GPUSupport
 from factual_models import tuning_model
+from factual_models import load_dataset
 from factual_models.tf_model import Transformer
 
 import math
@@ -13,11 +14,13 @@ import torch
 import pandas as pd
 
 
-# SPECIFY HERE THE RUN CONFIG
 run_config = tuning_model.interact('transformer')
+DATASET_NAME = tuning_model.datasets[run_config.run[0]]
+
 metrics = tuning_model.EvaluationMetricsConfiguration(
-    run=f"{run_config.run}_transformer_metrics"
-)
+    run=f"{run_config.run}_transformer_metrics")
+
+print(f"\033[42m\033[30m{DATASET_NAME=}\033[0m")
 print(f"\033[43m\033[30m{run_config}\033[0m")
 
 
@@ -82,107 +85,17 @@ WEIGHT_DECAY = run_config.train_weight_decay
 LOG_FREQ = run_config.train_log_freq
 
 
-# Dataset
-_wiki_bytes = None
-
-
-def load_dataset():
-
-    WIKI_PATH = os.path.join(os.path.dirname(
-        __file__), "simple-wikipedia.parquet")
-    # TINYSTORIES_PATH = os.path.join(os.path.dirname(
-    #     __file__), "tinystories/train-00000.parquet")
-    DATASET_PATH = WIKI_PATH
-
-    global _wiki_bytes
-    if _wiki_bytes is not None:
-        return _wiki_bytes
-
-    df = pd.read_parquet(DATASET_PATH)
-
-    texts = df["text"].astype(str).tolist()
-
-    # marks document boundaries, helps model learn
-    full_text = "\n\n<doc>\n\n".join(texts)
-
-    # converts string into utf-8 encoded raw bytes,
-    # then converts to byte-level integer array (0-255)
-    _wiki_bytes = np.frombuffer(
-        full_text.encode("utf-8"),
-        dtype=np.uint8,
-    )
-    return _wiki_bytes
-
-
-_data_cache = None
-
-
-def load_tinystories():
-    global _data_cache
-    if _data_cache is not None:
-        return _data_cache
-
-    base_path = os.path.join(os.path.dirname(__file__), "tinystories")
-
-    # TRAIN
-    train_files = [
-        "train-00000.parquet",
-        "train-00001.parquet",
-        "train-00002.parquet",
-        "train-00003.parquet",
-    ]
-    dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
-    train_df = pd.concat(dfs, ignore_index=True)
-
-    train_texts = train_df["text"].astype(str).tolist()
-    train_full = "\n\n<doc>\n\n".join(train_texts)
-    train_bytes = np.frombuffer(train_full.encode("utf-8"), dtype=np.uint8)
-
-    # VAL
-    val_df = pd.read_parquet(os.path.join(
-        base_path, "validation-00000.parquet"))
-    val_texts = val_df["text"].astype(str).tolist()
-    val_full = "\n\n<doc>\n\n".join(val_texts)
-    val_bytes = np.frombuffer(val_full.encode("utf-8"), dtype=np.uint8)
-
-    _data_cache = {
-        "train": train_bytes,
-        "val": val_bytes,
-    }
-
-    return _data_cache
-# def load_tinystories(split):
-#     base_path = os.path.join(os.path.dirname(__file__), "tinystories")
-#
-#     if split == "train":
-#         train_files = [
-#             "train-00000.parquet",
-#             "train-00001.parquet",
-#             "train-00002.parquet",
-#             "train-00003.parquet",
-#         ]
-#         dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
-#         df = pd.concat(dfs, ignore_index=True)
-#     else:
-#         df = pd.read_parquet(os.path.join(base_path, "validation-00000.parquet"))
-#
-#     texts = df["text"].astype(str).tolist()
-#     full_text = "\n\n<doc>\n\n".join(texts)
-#
-#     return np.frombuffer(
-#         full_text.encode("utf-8"),
-#         dtype=np.uint8,
-#     )
-
-
 def get_batch(split):
-    # data = load_dataset()
-    data = load_tinystories()[split]
-
-    # if split == "train":
-    #     data = data[: int(0.9 * len(data))]
-    # else:
-    #     data = data[int(0.9 * len(data)):]
+    if DATASET_NAME == "tinystories":
+        data = load_dataset.load_tinystories()[split]
+    elif DATASET_NAME == "wiki":
+        data = load_dataset.load_wiki()
+        # NO NEED to split due to separate validation dataset
+        # training and validation split .9 to .1
+        if split == "train":
+            data = data[: int(0.9 * len(data))]
+        else:
+            data = data[int(0.9 * len(data)):]
 
     ix = torch.randint(len(data) - BLOCK_SIZE, (BATCH_SIZE,))
 
@@ -210,7 +123,15 @@ def main():
     import time
     start_time = time.time()
 
-    model = Transformer().to(device)
+    model = Transformer(
+        n_layer=run_config.tf_n_layer,
+        d_model=run_config.tf_d_model,
+        n_head=run_config.tf_n_head,
+        mlp_mult=run_config.tf_mlp_mult,
+        dropout=run_config.tf_dropout,
+        vocab_size=run_config.tf_vocab_size,
+        max_seq_len=run_config.train_block_size,
+    ).to(device)
     model = torch.compile(model)
 
     optimizer = torch.optim.AdamW(

@@ -1,9 +1,75 @@
 from dataclasses import dataclass
 import math
+import torch
 from dataclasses import field  # used for mutable instances
 from typing import List
 import json
 from dataclasses import asdict
+
+# generation
+
+
+def generate_text(device, model, prompt_text, max_new_tokens=100, top_k=3, temperature=1.0):
+    prompt = torch.tensor(
+        bytearray(prompt_text, "utf-8"),
+        dtype=torch.long,
+        device=device
+    ).unsqueeze(0)
+
+    with torch.no_grad():
+        output = model.generate(
+            prompt,
+            max_new_tokens=max_new_tokens,
+            top_k=top_k,
+            temperature=temperature,
+        )
+
+    decoded = bytes(
+        output.to(torch.uint8).cpu().squeeze(0)
+    ).decode(errors="backslashreplace")
+
+    return decoded
+
+
+def run_questions_from_file(run_config, device, filepath, model):
+    from pathlib import Path
+    rows = []
+
+    with open(filepath, "r") as f:
+        lines = f.readlines()
+
+    # extract only the "Questions" section
+    in_questions = False
+    for line in lines:
+        line = line.strip()
+
+        if line == "Questions":
+            in_questions = True
+            continue
+        if line == "Answers":
+            break
+
+        if in_questions and line:
+            # remove numbering like "1. "
+            question = line.split(".", 1)[-1].strip()
+
+            result = generate_text(device, model, question)
+            rows.append((question, result))
+
+    # print table
+    saved_output = []
+
+    for prompt, output in rows:
+        safe_prompt = prompt.replace("|", "\\|").replace("<br>", "\n")
+        safe_output = output.replace("|", "\\|").replace("<br>", "\n")
+
+        line = f"| {safe_prompt} | {safe_output[len(safe_prompt):]} |"
+        print(line)
+        saved_output.append(line)
+
+    with open(Path(__file__).parent / "inference" / f"{run_config.run}_questions.md", "w") as f:
+        f.write("\n| Prompt | Output |\n|--------|--------|\n")
+        f.write("\n".join(saved_output))
 
 
 def save_metrics(run_config, metrics):
@@ -25,10 +91,12 @@ def load_metrics(run_name):
 
 def interact(model_type="bdh"):
     if model_type == "bdh":
+        prefixes = ["A", "C"]
+        cpu_names = [f"{p}cpu" for p in prefixes]
         runs = [
             globals()[name]
             for name in sorted(globals())
-            if name == "ACPU" or (name.startswith("A") and name[1:].isdigit())
+            if name in cpu_names or any(name.startswith(prefix) and name[1:].isdigit() for prefix in prefixes)
         ]
 
         for i, r in enumerate(runs):
@@ -36,11 +104,12 @@ def interact(model_type="bdh"):
                 f"{i}: {r.run}, L={r.bdh_n_layer}, D={r.bdh_n_embd}, H={r.bdh_n_head}, BATCH_SIZE={r.train_batch_size}")
 
     elif model_type == "transformer":
-        # runs = [DCPU] + [globals()[f"D{i}"] for i in range(1, 10)]
+        prefixes = ["B", "D"]
+        cpu_names = [f"{p}cpu" for p in prefixes]
         runs = [
             globals()[name]
             for name in sorted(globals())
-            if name == "BCPU" or (name.startswith("B") and name[1:].isdigit())
+            if name in cpu_names or any(name.startswith(prefix) and name[1:].isdigit() for prefix in prefixes)
         ]
 
         for i, r in enumerate(runs):
@@ -57,16 +126,6 @@ def interact(model_type="bdh"):
         return r
     except:
         return runs[0]
-# def interact():
-#     runs = [CPU] + [globals()[f"A{i}"] for i in range(1, 11)]
-#     for i, r in enumerate(runs):
-#         print(f"{i}: {r.run}, L={r.bdh_n_layer}, D={r.bdh_n_embd}, H={r.bdh_n_head}, BATCH_SIZE={r.train_batch_size}")
-#     try:
-#         r = runs[int(input("Select: "))]
-#         r.train_batch_size = (int(input("Batch size: ")))
-#         return r
-#     except:
-#         return CPU
 
 
 @dataclass
@@ -132,270 +191,61 @@ class EvaluationMetricsConfiguration:
         return [math.exp(v) for v in val_loss]
 
 
-ACPU = DragonConfiguration(
-    run="cpu",
-    bdh_n_layer=6,
-    bdh_n_embd=256,
-    bdh_n_head=4,
-    bdh_mlp_internal_dim_multiplier=32,
-    # use default values for: dropout, vocabulary size
-    train_block_size=512,
-    train_learning_rate=1e-3,
-    train_batch_size=8,
-    train_max_iters=1,
-    train_weight_decay=0.1,
-    eval_iters=1,
-    train_log_freq=1,
-)
-A1 = DragonConfiguration(
-    run="A1",
-    bdh_n_layer=6,
-    bdh_n_embd=256,
-    bdh_n_head=4,
-    bdh_mlp_internal_dim_multiplier=64,
-    # use default values for: dropout, vocabulary size
-    train_learning_rate=1e-3,
-    train_batch_size=16,
-    train_max_iters=6000,
-    train_weight_decay=0.1,
-    # use default values for: block size, log frequency
-)
+def produce_dragon(prefix, spec):
+    r, l, e, h, m, lr, bs, mi, wd = spec
+    return DragonConfiguration(
+        run=prefix+r,
+        bdh_n_layer=l,
+        bdh_n_embd=e,
+        bdh_n_head=h,
+        bdh_mlp_internal_dim_multiplier=m,
+        train_learning_rate=lr,
+        train_batch_size=bs,
+        train_max_iters=mi,
+        train_weight_decay=wd,
+    )
 
-A2 = DragonConfiguration(
-    run="A2",
-    bdh_n_layer=8,
-    bdh_n_embd=384,
-    bdh_n_head=6,
-    bdh_mlp_internal_dim_multiplier=64,
-    train_learning_rate=5e-4,
-    train_batch_size=16,
-    train_max_iters=12000,
-    train_weight_decay=0.1,
-)
 
-A3 = DragonConfiguration(
-    run="A3",
-    bdh_n_layer=12,
-    bdh_n_embd=512,
-    bdh_n_head=8,
-    bdh_mlp_internal_dim_multiplier=64,
-    train_learning_rate=3e-4,
-    train_batch_size=16,
-    train_max_iters=20000,
-    train_weight_decay=0.1,
-)
+def produce_transformer(prefix, spec):
+    r, l, d, h, m, lr, bs, mi, wd = spec
+    return TransformerConfiguration(
+        run=prefix+r,
+        tf_n_layer=l,
+        tf_d_model=d,
+        tf_n_head=h,
+        tf_mlp_mult=m,
+        train_learning_rate=lr,
+        train_batch_size=bs,
+        train_max_iters=mi,
+        train_weight_decay=wd,
+    )
 
-A4 = DragonConfiguration(
-    run="A4",
-    bdh_n_layer=8,
-    bdh_n_embd=384,
-    bdh_n_head=6,
-    bdh_mlp_internal_dim_multiplier=128,
-    train_learning_rate=5e-4,
-    train_batch_size=16,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
 
-A5 = DragonConfiguration(
-    run="A5",
-    bdh_n_layer=8,
-    bdh_n_embd=384,
-    bdh_n_head=8,
-    bdh_mlp_internal_dim_multiplier=128,
-    train_learning_rate=5e-4,
-    train_batch_size=16,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
+def produce_globals(hyperparams, run, run_type):
+    for spec in hyperparams:
+        if run_type == "bdh":
+            globals()[f"{run}{spec[0]}"] = produce_dragon(run, spec)
+        elif run_type == "tf":
+            globals()[f"{run}{spec[0]}"] = produce_transformer(run, spec)
 
-A6 = DragonConfiguration(
-    run="A6",
-    bdh_n_layer=8,
-    bdh_n_embd=512,
-    bdh_n_head=8,
-    bdh_mlp_internal_dim_multiplier=128,
-    train_learning_rate=4e-4,
-    train_batch_size=16,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
 
-A7 = DragonConfiguration(
-    run="A7",
-    bdh_n_layer=8,
-    bdh_n_embd=512,
-    bdh_n_head=16,
-    bdh_mlp_internal_dim_multiplier=128,
-    train_learning_rate=4e-4,
-    train_batch_size=16,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
+hyperparams = [
+    ["cpu", 6, 256, 4, 32, 1e-3, 8, 1, 0.1],
+    ["1", 6, 256, 4, 64, 1e-3, 8, 6000, 0.1],
+    ["2", 8, 384, 6, 64, 5e-4, 4, 12000, 0.1],
+    ["3", 12, 512, 8, 64, 3e-4, 2, 20000, 0.1],
+    ["4", 8, 384, 6, 128, 5e-4, 2, 12000, 0.05],
+    ["5", 8, 384, 8, 128, 5e-4, 2, 12000, 0.05],
+    ["6", 8, 512, 8, 128, 4e-4, 2, 12000, 0.05],
+    ["7", 8, 512, 16, 128, 4e-4, 2, 12000, 0.05],
+    ["8", 8, 512, 8, 256, 4e-4, 1, 12000, 0.01],
+    ["9", 8, 512, 8, 256, 4e-4, 1, 12000, 0.1],
+    ["10", 8, 384, 6, 64, 5e-4, 4, 30000, 0.1],
+]
+datasets = {"A": "wiki", "B": "wiki", "C": "tinystories", "D": "tinystories"}
 
-A8 = DragonConfiguration(
-    run="A8",
-    bdh_n_layer=8,
-    bdh_n_embd=512,
-    bdh_n_head=8,
-    bdh_mlp_internal_dim_multiplier=256,
-    train_learning_rate=4e-4,
-    train_batch_size=16,
-    train_max_iters=12000,
-    train_weight_decay=0.01,
-)
 
-A9 = DragonConfiguration(
-    run="A9",
-    bdh_n_layer=8,
-    bdh_n_embd=512,
-    bdh_n_head=8,
-    bdh_mlp_internal_dim_multiplier=256,
-    train_learning_rate=4e-4,
-    train_batch_size=16,
-    train_max_iters=12000,
-    train_weight_decay=0.1,
-)
-
-A10 = DragonConfiguration(
-    run="A10",
-    bdh_n_layer=8,
-    bdh_n_embd=384,
-    bdh_n_head=6,
-    bdh_mlp_internal_dim_multiplier=64,
-    train_learning_rate=5e-4,
-    train_batch_size=4,
-    train_max_iters=30000,
-    train_weight_decay=0.1,
-)
-
-B2 = TransformerConfiguration(
-    run="B2",
-    tf_n_layer=8,
-    tf_d_model=384,
-    tf_n_head=6,
-    tf_mlp_mult=64,
-    train_learning_rate=5e-4,
-    train_batch_size=4,
-    train_max_iters=12000,
-    train_weight_decay=0.1,
-)
-
-DCPU = TransformerConfiguration(
-    run="cpu",
-    tf_n_layer=6,
-    tf_d_model=256,
-    tf_n_head=4,
-    tf_mlp_mult=64,
-    train_learning_rate=1e-3,
-    train_batch_size=8,
-    train_max_iters=1,
-    train_weight_decay=0.1,
-)
-D1 = TransformerConfiguration(
-    run="D1",
-    tf_n_layer=6,
-    tf_d_model=256,
-    tf_n_head=4,
-    tf_mlp_mult=64,
-    train_learning_rate=1e-3,
-    train_batch_size=8,
-    train_max_iters=6000,
-    train_weight_decay=0.1,
-)
-
-D2 = TransformerConfiguration(
-    run="D2",
-    tf_n_layer=8,
-    tf_d_model=384,
-    tf_n_head=6,
-    tf_mlp_mult=64,
-    train_learning_rate=5e-4,
-    train_batch_size=4,
-    train_max_iters=12000,
-    train_weight_decay=0.1,
-)
-
-D3 = TransformerConfiguration(
-    run="D3",
-    tf_n_layer=12,
-    tf_d_model=512,
-    tf_n_head=8,
-    tf_mlp_mult=64,
-    train_learning_rate=3e-4,
-    train_batch_size=2,
-    train_max_iters=20000,
-    train_weight_decay=0.1,
-)
-
-D4 = TransformerConfiguration(
-    run="D4",
-    tf_n_layer=8,
-    tf_d_model=384,
-    tf_n_head=6,
-    tf_mlp_mult=128,
-    train_learning_rate=5e-4,
-    train_batch_size=2,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
-
-D5 = TransformerConfiguration(
-    run="D5",
-    tf_n_layer=8,
-    tf_d_model=384,
-    tf_n_head=8,
-    tf_mlp_mult=128,
-    train_learning_rate=5e-4,
-    train_batch_size=2,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
-
-D6 = TransformerConfiguration(
-    run="D6",
-    tf_n_layer=8,
-    tf_d_model=512,
-    tf_n_head=8,
-    tf_mlp_mult=128,
-    train_learning_rate=4e-4,
-    train_batch_size=2,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
-
-D7 = TransformerConfiguration(
-    run="D7",
-    tf_n_layer=8,
-    tf_d_model=512,
-    tf_n_head=16,
-    tf_mlp_mult=128,
-    train_learning_rate=4e-4,
-    train_batch_size=2,
-    train_max_iters=12000,
-    train_weight_decay=0.05,
-)
-
-D8 = TransformerConfiguration(
-    run="D8",
-    tf_n_layer=8,
-    tf_d_model=512,
-    tf_n_head=8,
-    tf_mlp_mult=256,
-    train_learning_rate=4e-4,
-    train_batch_size=1,
-    train_max_iters=12000,
-    train_weight_decay=0.01,
-)
-
-D9 = TransformerConfiguration(
-    run="D9",
-    tf_n_layer=8,
-    tf_d_model=512,
-    tf_n_head=8,
-    tf_mlp_mult=256,
-    train_learning_rate=4e-4,
-    train_batch_size=1,
-    train_max_iters=12000,
-    train_weight_decay=0.1,
-)
+produce_globals(hyperparams, 'A', 'bdh')
+produce_globals(hyperparams, 'B', 'tf')
+produce_globals(hyperparams, 'C', 'bdh')
+produce_globals(hyperparams, 'D', 'tf')

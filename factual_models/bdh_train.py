@@ -3,6 +3,7 @@ from pathlib import Path
 from template.gpu_support import GPUSupport
 from factual_models import bdh_model as bdh
 from factual_models import tuning_model
+from factual_models import load_dataset
 import math
 import copy
 import requests
@@ -14,9 +15,12 @@ import pandas as pd
 
 # SPECIFY HERE THE RUN CONFIG (e.g. A1, A2)
 run_config = tuning_model.interact()
+DATASET_NAME = tuning_model.datasets[run_config.run[0]]
 
 metrics = tuning_model.EvaluationMetricsConfiguration(
     run=f"{run_config.run}_metrics")
+
+print(f"\033[42m\033[30m{DATASET_NAME=}\033[0m")
 print(f"\033[43m\033[30m{run_config}\033[0m")
 
 
@@ -98,7 +102,6 @@ LOG_FREQ = run_config.train_log_freq
 # [old] tinyshakespeare
 # input_file_path = os.path.join(os.path.dirname(__file__), "input.txt")
 
-_wiki_bytes = None
 
 # [old] tinyshakespeare
 # fetch the tiny shakespeare dataset
@@ -108,84 +111,23 @@ _wiki_bytes = None
 #         with open(input_file_path, "w") as f:
 #             f.write(requests.get(data_url).text)
 
-# def load_wiki():
-#
-#     WIKI_PATH = os.path.join(os.path.dirname(__file__), "simple-wikipedia.parquet")
-#
-#     global _wiki_bytes
-#     if _wiki_bytes is not None:
-#         return _wiki_bytes
-#
-#     df = pd.read_parquet(WIKI_PATH)
-#
-#     texts = df["text"].astype(str).tolist()
-#
-#     # marks document boundaries, helps model learn
-#     full_text = "\n\n<doc>\n\n".join(texts)
-#
-#     # converts string into utf-8 encoded raw bytes,
-#     # then converts to byte-level integer array (0-255)
-#     _wiki_bytes = np.frombuffer(
-#         full_text.encode("utf-8"),
-#         dtype=np.uint8,
-#     )
-#     return _wiki_bytes
-
-
-def load_tinystories():
-    base_path = os.path.join(os.path.dirname(__file__), "tinystories")
-
-    global _wiki_bytes
-    if _wiki_bytes is not None:
-        return _wiki_bytes
-
-    # ---- TRAIN ----
-    train_files = [
-        "train-00000.parquet",
-        "train-00001.parquet",
-        "train-00002.parquet",
-        "train-00003.parquet",
-    ]
-
-    dfs = [pd.read_parquet(os.path.join(base_path, f)) for f in train_files]
-    train_df = pd.concat(dfs, ignore_index=True)
-
-    train_texts = train_df["text"].astype(str).tolist()
-    train_full = "\n\n<doc>\n\n".join(train_texts)
-
-    train_bytes = np.frombuffer(train_full.encode("utf-8"), dtype=np.uint8)
-
-    # ---- VALIDATION ----
-    val_path = os.path.join(base_path, "validation-00000.parquet")
-    val_df = pd.read_parquet(val_path)
-
-    val_texts = val_df["text"].astype(str).tolist()
-    val_full = "\n\n<doc>\n\n".join(val_texts)
-
-    val_bytes = np.frombuffer(val_full.encode("utf-8"), dtype=np.uint8)
-
-    _wiki_bytes = {
-        "train": train_bytes,
-        "val": val_bytes,
-    }
-
-    return _wiki_bytes
-
 
 def get_batch(split):
     # [old] tinyshakespeare
     # data = np.memmap(input_file_path, dtype=np.uint8, mode="r")
-    # [new] wiki
     # treat the file as bytes
-    data = load_tinystories()[split]
 
-    # data = load_wiki()
-    # NO NEED to split due to separate validation dataset
-    # training and validation split .9 to .1
-    # if split == "train":
-    #     data = data[: int(0.9 * len(data))]
-    # else:
-    #     data = data[int(0.9 * len(data)):]
+    if DATASET_NAME == "tinystories":
+        data = load_dataset.load_tinystories()[split]
+    elif DATASET_NAME == "wiki":
+        data = load_dataset.load_wiki()
+        # NO NEED to split due to separate validation dataset
+        # training and validation split .9 to .1
+        if split == "train":
+            data = data[: int(0.9 * len(data))]
+        else:
+            data = data[int(0.9 * len(data)):]
+
     ix = torch.randint(len(data) - BLOCK_SIZE, (BATCH_SIZE,))
     x = torch.stack(
         [torch.from_numpy((data[i: i + BLOCK_SIZE]).astype(np.int64))

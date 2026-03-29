@@ -3,7 +3,7 @@ import sys
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(
-        sys.argv) > 1 and sys.argv[1].strip() else "inference"
+        sys.argv) > 1 and sys.argv[1].strip() else "itf"
 
     if mode == "bdh":
         from factual_models.bdh_train import main as bdh_main
