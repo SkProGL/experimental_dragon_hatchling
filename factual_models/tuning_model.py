@@ -21,7 +21,7 @@ def generate_text(device, model, prompt_text, max_new_tokens=100, top_k=3, tempe
             prompt,
             max_new_tokens=max_new_tokens,
             top_k=top_k,
-            temperature=temperature,
+            # temperature=temperature,
         )
 
     decoded = bytes(
@@ -33,43 +33,86 @@ def generate_text(device, model, prompt_text, max_new_tokens=100, top_k=3, tempe
 
 def run_questions_from_file(run_config, device, filepath, model):
     from pathlib import Path
-    rows = []
+
+    normal_rows = []
+    corrupted_rows = []
 
     with open(filepath, "r") as f:
         lines = f.readlines()
 
-    # extract only the "Questions" section
-    in_questions = False
+    section = None  # "normal" or "corrupted"
+    context_rows = []
+    answers = []
+
     for line in lines:
         line = line.strip()
 
         if line == "Questions":
-            in_questions = True
+            section = "normal"
             continue
+
+        if line == "Corrupted questions":
+            section = "corrupted"
+            continue
+
         if line == "Answers":
-            break
+            section = "answers"
+            continue
 
-        if in_questions and line:
-            # remove numbering like "1. "
+        # collect answers
+        if section == "answers" and line:
+            answer = line.split(".", 1)[-1].strip()
+            answers.append(answer)
+            continue
+
+        if section and line:
             question = line.split(".", 1)[-1].strip()
-
             result = generate_text(device, model, question)
-            rows.append((question, result))
 
-    # print table
-    saved_output = []
+            if section == "normal":
+                normal_rows.append((question, result))
+            elif section == "corrupted":
+                corrupted_rows.append((question, result))
+    # build context prompts (only for normal questions)
+    for i, (question, _) in enumerate(normal_rows):
+        if i < len(answers):
+            context = answers[i]
+            prompt = f"Context: {context}\nQ: {question}\nA:"
+            result = generate_text(device, model, prompt)
+            context_rows.append((prompt, result))
 
-    for prompt, output in rows:
-        safe_prompt = prompt.replace("|", "\\|").replace("<br>", "\n")
-        safe_output = output.replace("|", "\\|").replace("<br>", "\n")
+    def format_rows(rows):
+        formatted = []
+        for i, (prompt, output) in enumerate(rows, 1):
+            safe_prompt = prompt.replace("|", "\\|").replace("\n", " ")
+            safe_output = output.replace("|", "\\|").replace("\n", " ")
 
-        line = f"| {safe_prompt} | {safe_output[len(safe_prompt):]} |"
-        print(line)
-        saved_output.append(line)
+            line = f"| {i}. {safe_prompt} | {safe_output[len(safe_prompt):]} |"
+            print(line)
+            formatted.append(line)
+        return formatted
 
+    # print both tables
+    print("\n=== NORMAL QUESTIONS ===")
+    normal_table = format_rows(normal_rows)
+
+    print("\n=== CORRUPTED QUESTIONS ===")
+    corrupted_table = format_rows(corrupted_rows)
+    print("\n=== CONTEXT QUESTIONS ===")
+    context_table = format_rows(context_rows)
+    # save to file
     with open(Path(__file__).parent / "inference" / f"{run_config.run}_questions.md", "w") as f:
+        f.write("## Normal Questions\n")
         f.write("\n| Prompt | Output |\n|--------|--------|\n")
-        f.write("\n".join(saved_output))
+        f.write("\n".join(normal_table))
+
+        f.write("\n\n## Corrupted Questions\n")
+        f.write("\n| Prompt | Output |\n|--------|--------|\n")
+        f.write("\n".join(corrupted_table))
+
+        # f.write("\n\n## Context Questions\n")
+        # f.write("\n| Prompt | Output |\n|--------|--------|\n")
+        # f.write("\n".join(context_table))
 
 
 def save_metrics(run_config, metrics):
@@ -91,7 +134,7 @@ def load_metrics(run_name):
 
 def interact(model_type="bdh"):
     if model_type == "bdh":
-        prefixes = ["A", "C"]
+        prefixes = ["A", "C", "E"]
         cpu_names = [f"{p}cpu" for p in prefixes]
         runs = [
             globals()[name]
@@ -104,7 +147,7 @@ def interact(model_type="bdh"):
                 f"{i}: {r.run}, L={r.bdh_n_layer}, D={r.bdh_n_embd}, H={r.bdh_n_head}, BATCH_SIZE={r.train_batch_size}")
 
     elif model_type == "transformer":
-        prefixes = ["B", "D"]
+        prefixes = ["B", "D", "E"]
         cpu_names = [f"{p}cpu" for p in prefixes]
         runs = [
             globals()[name]
@@ -242,10 +285,23 @@ hyperparams = [
     ["9", 8, 512, 8, 256, 4e-4, 1, 12000, 0.1],
     ["10", 8, 384, 6, 64, 5e-4, 4, 30000, 0.1],
 ]
-datasets = {"A": "wiki", "B": "wiki", "C": "tinystories", "D": "tinystories"}
+
+mix_hyperparams = [
+    ["cpu", 6, 256, 4, 32, 1e-3, 8, 1, 0.1],
+    ["2", 8, 384, 6, 64, 5e-4, 4, 12000, 0.1],
+    ["10", 8, 384, 6, 64, 5e-4, 4, 30000, 0.1],
+]
+datasets = {"A": "wiki",
+            "B": "wiki",
+            "C": "tinystories",
+            "D": "tinystories",
+            "E": "mixed",
+            "F": "mixed"}
 
 
 produce_globals(hyperparams, 'A', 'bdh')
 produce_globals(hyperparams, 'B', 'tf')
 produce_globals(hyperparams, 'C', 'bdh')
 produce_globals(hyperparams, 'D', 'tf')
+produce_globals(mix_hyperparams, 'E', 'bdh')
+produce_globals(mix_hyperparams, 'F', 'tf')

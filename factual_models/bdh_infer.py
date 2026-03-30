@@ -12,9 +12,13 @@ for path in sorted(model_dir.iterdir()):
 
 # select run config
 run_config = tuning_model.interact()
+# run_config = getattr(tuning_model, "A10")
+# run_config = getattr(tuning_model, "C2")
 
+DATASET_NAME = tuning_model.datasets[run_config.run[0]]
 #     os.path.join(os.path.dirname(__file__), f"inference/{run_config.run}")
 MODEL_PATH = Path(__file__).parent / "models" / f"{run_config.run}.pt"
+print(f"\033[42m\033[30m{DATASET_NAME=}\033[0m")
 print(f"\033[43m\033[30m{run_config}\033[0m")
 
 GPUSupport()
@@ -43,24 +47,13 @@ def load_model():
     state_dict = torch.load(MODEL_PATH, map_location=device)[
         "model_state_dict"]
 
-    # fix: remove "_orig_mod." prefix
+    # fix: removed "_orig_mod." prefix
     new_state_dict = {k.replace("_orig_mod.", ""):
                       v for k, v in state_dict.items()}
     model.load_state_dict(new_state_dict)
 
     model.eval()
     return model
-
-# def load_model():
-#     config = build_bdh_config(run_config)
-#
-#     model = bdh.BDH(config).to(device)
-#
-#     checkpoint = torch.load(MODEL_PATH, map_location=device)
-#     model.load_state_dict(checkpoint["model_state_dict"])
-#
-#     model.eval()
-#     return model
 
 
 def print_markdown_table(prompt, output):
@@ -76,7 +69,7 @@ def print_markdown_table(prompt, output):
 def main():
     print(f"Loading model: {run_config.run}")
 
-    DATA_PATH = Path(__file__).parent / "inference" / f"wiki.txt"
+    DATA_PATH = Path(__file__).parent / "inference" / f"{DATASET_NAME}.txt"
     model = load_model()
 
     # prompt = "Gravity\n\nGravity is"

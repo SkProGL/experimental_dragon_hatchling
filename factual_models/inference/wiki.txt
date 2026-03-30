@@ -9,18 +9,20 @@ Questions
 8. The largest planet in the Solar System is
 9. The square root of 144 is
 10. The first person to walk on Mars was
+11. August
 
 Answers
 1. Paris
 2. Au
 3. Albert Einstein
 4. Mount Everest
-5. 100°C (or 100 degrees Celsius)
+5. 100 degrees Celsius
 6. Canberra
 7. George Orwell
 8. Jupiter
 9. 12
-10. No one — no human has walked on Mars yet
+10. No one - no human has walked on Mars yet
+11. (Aug.) is the eighth month of the year in the Gregorian calendar, coming between July and September.
 
 Corrupted questions
 1. France capital the is
@@ -33,3 +35,4 @@ Corrupted questions
 8. Solar System planet largest the is which
 9. 144 of square root the is what
 10. Mars on first person walked who was the
+11. Augsut

@@ -117,16 +117,37 @@ def get_batch(split):
     # data = np.memmap(input_file_path, dtype=np.uint8, mode="r")
     # treat the file as bytes
 
-    if DATASET_NAME == "tinystories":
+    # NEW
+    if DATASET_NAME == "mixed":
+        if np.random.rand() < 0.5:
+            data = load_dataset.load_wiki()
+            if split == "train":
+                data = data[: int(0.9 * len(data))]
+            else:
+                data = data[int(0.9 * len(data)):]
+        else:
+            data = load_dataset.load_tinystories()[split]
+
+    elif DATASET_NAME == "tinystories":
         data = load_dataset.load_tinystories()[split]
+
     elif DATASET_NAME == "wiki":
         data = load_dataset.load_wiki()
-        # NO NEED to split due to separate validation dataset
-        # training and validation split .9 to .1
         if split == "train":
             data = data[: int(0.9 * len(data))]
         else:
             data = data[int(0.9 * len(data)):]
+    # OLD
+    # if DATASET_NAME == "tinystories":
+    #     data = load_dataset.load_tinystories()[split]
+    # elif DATASET_NAME == "wiki":
+    #     data = load_dataset.load_wiki()
+    #     # NO NEED to split due to separate validation dataset
+    #     # training and validation split .9 to .1
+    #     if split == "train":
+    #         data = data[: int(0.9 * len(data))]
+    #     else:
+    #         data = data[int(0.9 * len(data)):]
 
     ix = torch.randint(len(data) - BLOCK_SIZE, (BATCH_SIZE,))
     x = torch.stack(

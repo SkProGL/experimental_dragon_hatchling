@@ -61,6 +61,7 @@ Pick best run based on validation loss, but mention compute cost and diminishing
 | A9 | 8 | 512 | 8 | 256 | 4e-4 | 1 | 0.1 | 12k |
 | A10 | 8 | 384 | 6 | 64 | 5e-04 | 4 | 0.1 | 30k |
 
+
 ##### (BDH) Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
@@ -98,24 +99,25 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | B9 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.1 | 12k |
 | B10 | 8 | 384 | 6 | 64 | 5e-04 | 4 | 0.1 | 30k |
 
-##### (TF) Evaluation metrics (model output)
+
+
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
-| B1 | 1.23 | 1.14 | 3.12 | - | - | 2m |
-| B2 | 1.21 | 1.10 | 3.00 | - | - | 3m |
-| B3 | 1.35 | 1.18 | 3.26 | - | - | 5m |
-| B4 | 1.32 | 1.15 | 3.16 | - | - | 3m |
-| B5 | 1.32 | 1.15 | 3.16 | - | - | 3m |
-| B6 | 1.32 | 1.21 | 3.34 | - | - | 3m |
-| B7 | 1.32 | 1.22 | 3.39 | - | - | 3m |
-| B8 | 1.46 | 1.31 | 3.70 | - | - | 3m |
-| B9 | 1.51 | 1.39 | 4.03 | - | - | 3m |
-| B10 | 1.14 | 0.96 | 2.60 | - | - | 9m |
+| B1 | 1.20 | 1.11 | 3.02 | - | - | 1m |
+| B2 | 1.16 | 1.03 | 2.81 | - | - | 4m |
+| B3 | 1.14 | 0.98 | 2.66 | - | - | 9m |
+| B4 | 1.25 | 1.13 | 3.09 | - | - | 4m |
+| B5 | 1.23 | 1.09 | 2.98 | - | - | 3m |
+| B6 | 1.27 | 1.10 | 3.00 | - | - | 4m |
+| B7 | 1.25 | 1.11 | 3.02 | - | - | 4m |
+| B8 | 1.51 | 1.43 | 4.17 | - | - | 6m |
+| B9 | 1.46 | 1.37 | 3.94 | - | - | 6m |
+| B10 | 1.08 | 0.92 | 2.50 | - | - | 11m |
+
 
 
 # TinyStories dataset
 
-### 2.1 BDH run on same parameters
 ##### (BDH) Tunable hyperparameters
 | Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations |
 | --- | ------ | --- | ----- | -------- | -- | ----- | ------------ | ---------- |
@@ -129,6 +131,7 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | C8 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.01 | 12k |
 | C9 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.1 | 12k |
 
+
 ##### (BDH) Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
@@ -141,9 +144,9 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | C7 | 0.76 | 0.68 | 1.98 | 0.870 | 65536 | 1h 24m |
 | C8 | 0.84 | 0.77 | 2.16 | 0.863 | 131072 | 1h 28m |
 | C9 | 0.85 | 0.78 | 2.19 | 0.882 | 131072 | 1h 28m |
+| C10 | 0.61 | 0.56 | 1.75 | 0.848 | 24576 | 1h 28m |
 
 
-### 2.2 Transformer run on same parameters
 ##### (TF) Tunable hyperparameters
 
 | Run | Layers | Emb | Heads | MLP Mult | LR | Batch | Weight Decay | Iterations |
@@ -157,16 +160,18 @@ A10 is based on best run A2 hyperparameters, only with increased number of itera
 | D7 | 8 | 512 | 16 | 128 | 4e-04 | 2 | 0.05 | 12k |
 | D8 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.01 | 12k |
 | D9 | 8 | 512 | 8 | 256 | 4e-04 | 1 | 0.1 | 12k |
+| D10 | 8 | 384 | 6 | 64 | 5e-04 | 4 | 0.1 | 30k |
 
 ##### (TF) Evaluation metrics (model output)
 | Run | Train Loss | Val Loss | Perplexity | Sparsity | Latent/Layer | Time (hrs) |
 | --- | ---------- | -------- | ---------- | -------- | ------------ | ---------- |
-| D1 | 0.79 | 0.73 | 2.08 | - | - | 2m |
-| D2 | 0.77 | 0.72 | 2.05 | - | - | 4m |
-| D3 | 0.88 | 0.75 | 2.11 | - | - | 6m |
-| D4 | 0.88 | 0.78 | 2.18 | - | - | 4m |
-| D5 | 0.88 | 0.78 | 2.18 | - | - | 3m |
-| D6 | 0.89 | 0.78 | 2.19 | - | - | 3m |
-| D7 | 0.89 | 0.78 | 2.19 | - | - | 4m |
-| D8 | 0.98 | 0.84 | 2.33 | - | - | 4m |
-| D9 | 0.99 | 0.85 | 2.34 | - | - | 3m |
+| D1 | 0.81 | 0.75 | 2.12 | - | - | 1m |
+| D2 | 0.75 | 0.69 | 1.99 | - | - | 4m |
+| D3 | 0.74 | 0.65 | 1.92 | - | - | 9m |
+| D4 | 0.83 | 0.79 | 2.20 | - | - | 4m |
+| D5 | 0.81 | 0.73 | 2.08 | - | - | 4m |
+| D6 | 0.83 | 0.76 | 2.13 | - | - | 4m |
+| D7 | 0.83 | 0.73 | 2.08 | - | - | 5m |
+| D8 | 0.99 | 0.90 | 2.47 | - | - | 7m |
+| D9 | 0.94 | 0.86 | 2.37 | - | - | 9m |
+| D10 | 0.65 | 0.60 | 1.82 | - | - | 11m |

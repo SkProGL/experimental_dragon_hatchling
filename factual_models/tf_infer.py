@@ -12,25 +12,17 @@ for path in sorted(model_dir.iterdir()):
 
 # select run config
 run_config = tuning_model.interact('transformer')
+# run_config = getattr(tuning_model, "D10")
+DATASET_NAME = tuning_model.datasets[run_config.run[0]]
 
 #     os.path.join(os.path.dirname(__file__), f"inference/{run_config.run}")
 MODEL_PATH = Path(__file__).parent / "models" / f"{run_config.run}.pt"
+
+print(f"\033[42m\033[30m{DATASET_NAME=}\033[0m")
 print(f"\033[43m\033[30m{run_config}\033[0m")
 
 GPUSupport()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-# build model config from run config
-def build_transformer_config(run_config):
-    return tf_model.Transformer(
-        n_layer=run_config.tf_n_layer,
-        d_model=run_config.tf_d_model,
-        dropout=run_config.tf_dropout,
-        n_head=run_config.tf_n_head,
-        mlp_mult=run_config.tf_mlp_mult,
-        vocab_size=run_config.tf_vocab_size,
-    )
 
 
 def load_model():
@@ -77,7 +69,7 @@ def print_markdown_table(prompt, output):
 def main():
     print(f"Loading model: {run_config.run}")
 
-    DATA_PATH = Path(__file__).parent / "inference" / f"wiki.txt"
+    DATA_PATH = Path(__file__).parent / "inference" / f"{DATASET_NAME}.txt"
     model = load_model()
 
     tuning_model.run_questions_from_file(run_config, device, DATA_PATH, model)
