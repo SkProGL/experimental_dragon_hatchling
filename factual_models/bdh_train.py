@@ -14,7 +14,14 @@ import torch
 import pandas as pd
 
 # SPECIFY HERE THE RUN CONFIG (e.g. A1, A2)
-run_config = tuning_model.interact()
+
+print(os.listdir())
+with open('run.txt', 'r')as f:
+    run = f.read()
+    print(f"{run}")
+# run_config = tuning_model.interact()
+run_config = getattr(tuning_model, str(run))
+
 DATASET_NAME = tuning_model.datasets[run_config.run[0]]
 
 metrics = tuning_model.EvaluationMetricsConfiguration(
@@ -119,7 +126,7 @@ def get_batch(split):
 
     # NEW
     if DATASET_NAME == "mixed":
-        if np.random.rand() < 0.5:
+        if np.random.rand() < 0.7:
             data = load_dataset.load_wiki()
             if split == "train":
                 data = data[: int(0.9 * len(data))]

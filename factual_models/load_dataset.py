@@ -3,15 +3,16 @@ import os
 import pandas as pd
 
 
-_dataset_bytes = None
+# _dataset_bytes = None
+_dataset_cache = {}
 
 
 def load_tinystories():
     base_path = os.path.join(os.path.dirname(__file__), "tinystories")
 
-    global _dataset_bytes
-    if _dataset_bytes is not None:
-        return _dataset_bytes
+    global _dataset_cache
+    if _dataset_cache.get("tinystories") is not None:
+        return _dataset_cache["tinystories"]
 
     # ---- TRAIN ----
     train_files = [
@@ -38,18 +39,18 @@ def load_tinystories():
 
     val_bytes = np.frombuffer(val_full.encode("utf-8"), dtype=np.uint8)
 
-    _dataset_bytes = {"train": train_bytes, "val": val_bytes, }
+    _dataset_cache["tinystories"] = {"train": train_bytes, "val": val_bytes, }
 
-    return _dataset_bytes
+    return _dataset_cache["tinystories"]
 
 
 def load_wiki():
     WIKI_PATH = os.path.join(os.path.dirname(
         __file__), "simple-wikipedia.parquet")
 
-    global _dataset_bytes
-    if _dataset_bytes is not None:
-        return _dataset_bytes
+    global _dataset_cache
+    if _dataset_cache.get("wiki") is not None:
+        return _dataset_cache["wiki"]
 
     df = pd.read_parquet(WIKI_PATH)
 
@@ -60,8 +61,8 @@ def load_wiki():
 
     # converts string into utf-8 encoded raw bytes,
     # then converts to byte-level integer array (0-255)
-    _dataset_bytes = np.frombuffer(
+    _dataset_cache["wiki"] = np.frombuffer(
         full_text.encode("utf-8"),
         dtype=np.uint8,
     )
-    return _dataset_bytes
+    return _dataset_cache["wiki"]

@@ -4,7 +4,7 @@ import re
 import json
 import numpy as np
 import math
-
+from factual_models import tuning_model
 import dash
 from dash import dcc, html, Input, Output, State
 import plotly.graph_objects as go
@@ -51,10 +51,10 @@ if parsed:
     max_num = max(n for _, n, _ in parsed)
 
     prefix_str = ",".join(prefixes)
-    # title = f"[{prefix_str}{min_num}-{prefix_str}{max_num}] BDH TinyStories dataset runs"
-    title = f"[{prefix_str}{min_num}-{prefix_str}{max_num}] BDH En-Wiki dataset runs"
+    # title = f"[{prefix_str}{min_num}-{prefix_str}{max_num}] Transformer runs"
+    title = f"[{prefix_str}{min_num}-{prefix_str}{max_num}] Dragon hatchling runs"
 
-pio.templates.default = "plotly_dark"
+# pio.templates.default = "plotly_dark"
 
 
 # Metric colors (for grid only)
@@ -67,7 +67,7 @@ metric_colors = {
 
 def make_grid_figure():
     n_runs = len(runs)
-    cols = 3
+    cols = 2
     rows = math.ceil(n_runs / cols)
 
     fig = make_subplots(
@@ -144,16 +144,28 @@ def make_grid_figure():
         legend=dict(orientation="h", y=1.02, x=1, xanchor="right"),
         uirevision="constant",
     )
-
+    fig.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+    )
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
     return fig
 
 
 def make_single_figure():
+    import plotly.express as px
     fig = go.Figure()
+    colors = px.colors.qualitative.Set2
+
+    marker_traces = []
+    min_points = []  # <-- added
 
     for i, (name, data) in enumerate(runs.items()):
         steps = data["steps"]
+        color = colors[i % len(colors)]
 
+        # --- TRAIN ---
         fig.add_trace(
             go.Scatter(
                 x=steps,
@@ -162,10 +174,12 @@ def make_single_figure():
                 name="Training loss",
                 legendgroup="train",
                 showlegend=(i == 0),
+                line=dict(color=color, dash="dot"),
                 hovertemplate=f"{name} Training loss<br>Step: %{{x}}<br>Value: %{{y:.4f}}<extra></extra>",
             )
         )
 
+        # --- VAL ---
         fig.add_trace(
             go.Scatter(
                 x=steps,
@@ -174,10 +188,12 @@ def make_single_figure():
                 name="Validation loss",
                 legendgroup="val",
                 showlegend=(i == 0),
+                line=dict(color=color),
                 hovertemplate=f"{name} Validation loss<br>Step: %{{x}}<br>Value: %{{y:.4f}}<extra></extra>",
             )
         )
 
+        # --- PERPLEXITY ---
         fig.add_trace(
             go.Scatter(
                 x=steps,
@@ -186,20 +202,147 @@ def make_single_figure():
                 name="Perplexity",
                 legendgroup="ppl",
                 showlegend=(i == 0),
-                yaxis="y2",
+                # yaxis="y2",
+                line=dict(color=color, dash="dash"),
                 hovertemplate=f"{name} Perplexity<br>Step: %{{x}}<br>Value: %{{y:.4f}}<extra></extra>",
             )
         )
 
+        # --- MIN VAL LOSS POINT ---
+        val_losses = data["val_loss"]
+        min_idx = int(np.argmin(val_losses))
+        min_step = steps[min_idx]
+        min_val = val_losses[min_idx]
+
+        # marker
+        # fig.add_trace(
+        #     go.Scatter(
+        #         x=[min_step],
+        #         y=[min_val],
+        #         mode="markers",
+        #         # marker=dict(color=color, size=7),
+        #         marker=dict(color="black", size=7),
+        #         showlegend=False,
+        #         hoverinfo="skip",
+        #     )
+        # )
+        marker_traces.append(
+            go.Scatter(
+                x=[min_step],
+                y=[min_val],
+                mode="markers",
+                # marker=dict(color=color, size=9, line=dict(
+                marker=dict(color=color, size=7, line=dict(
+                    width=1, color="black")),
+                showlegend=False,
+                hoverinfo="skip",
+            )
+        )
+
+        min_points.append((name, min_step, min_val, color))  # <-- added
+
+        # annotation (arrow)
+        # (moved below)
+
+    # --- GROUP + ANNOTATE ---
+    from collections import defaultdict
+    groups = defaultdict(list)
+
+    for name, x, y, color in min_points:
+        # key = int(round(x / 500))
+        key = x
+        groups[key].append((name, x, y, color))
+
+    y_min = min(min(data["val_loss"]) for data in runs.values())
+    y_max = max(max(data["val_loss"]) for data in runs.values())
+
+    sorted_groups = sorted(groups.values(), key=lambda g: g[0][1])
+
+    prev_x = None
+    stack_level = 0
+
+    for group in sorted_groups:
+
+        x = group[0][1]
+
+        if prev_x is not None and abs(x - prev_x) < 1500:
+            stack_level += 1
+        else:
+            stack_level = 0
+
+        prev_x = x
+
+        fig.add_shape(
+            type="line",
+            x0=x,
+            x1=x,
+            y0=y_min,
+            y1=y_max,
+            line=dict(color="rgba(0,0,0,0.2)", width=2, dash="dash"),
+            layer="below"
+        )
+
+        label_parts = []
+        # for name, x_val, y_val, color in group:
+        for name, x_val, y_val, color in sorted(group, key=lambda t: t[2], reverse=True):
+            label_parts.append(
+                f"<span style='color:{color}'>{name}: {y_val:.2f}</span>"
+            )
+
+        label_text = "<br>".join(label_parts)
+
+        fig.add_annotation(
+            x=x,
+            y=min(y for _, _, y, _ in group),
+            text=label_text,
+            showarrow=False,
+            yshift=40 + stack_level * 60,
+            font=dict(size=13),
+            align="left",
+            bgcolor="rgba(255,255,255,0.8)",
+            bordercolor="rgba(0,0,0,0.2)",
+            borderwidth=1,
+        )
+    for trace in marker_traces:
+        fig.add_trace(trace)
+
     fig.update_layout(
+        # title=f"{title} combined plot",
         title=f"{title} combined plot",
         xaxis_title="Steps",
-        yaxis=dict(title="Loss / Perplexity"),
-        yaxis2=dict(title="Perplexity", overlaying="y", side="right"),
-        legend=dict(orientation="h", y=1.02, x=1, xanchor="right"),
+        # yaxis=dict(title="Loss / Perplexity"),
+        yaxis=dict(title="Loss"),
+        yaxis2=dict(title="", overlaying="y", side="right"),
+        legend=dict(orientation="h", y=.98, x=.98, xanchor="right"),
         uirevision="constant",
     )
 
+    fig.update_layout(
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+    )
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(0,0,0,0.05)")
+
+    fig.update_xaxes(
+        showline=True,
+        linecolor="black",
+        linewidth=1,
+        mirror=True,   #
+        ticks="outside"
+    )
+
+    fig.update_yaxes(
+        showline=True,
+        linecolor="black",
+        linewidth=1,
+        mirror=True,
+        ticks="outside"
+    )
+    fig.update_layout(
+        xaxis=dict(layer="above traces"),
+        yaxis=dict(layer="above traces"),
+    )
     return fig
 
 
@@ -219,7 +362,9 @@ app.layout = html.Div(
                     inline=True,
                 ),
                 html.Button("Save as HTML", id="save-btn"),
+                html.Button("Save as SVG", id="save-svg-btn"),
                 dcc.Download(id="download"),
+
             ],
             style={"padding": "10px", "display": "flex", "gap": "10px"},
         ),
@@ -246,27 +391,48 @@ def update_view(mode):
 @app.callback(
     Output("download", "data"),
     Input("save-btn", "n_clicks"),
+    Input("save-svg-btn", "n_clicks"),
     State("graph", "figure"),
     prevent_initial_call=True,
 )
-def save_html(n_clicks, fig_dict):
+def save_file(n_html, n_svg, fig_dict):
+    ctx = dash.callback_context
     fig = go.Figure(fig_dict)
+    fig.update_layout(
+        width=1200,
+        height=850,
+    )
+    if not ctx.triggered:
+        return dash.no_update
 
-    html_str = pio.to_html(fig, full_html=True, include_plotlyjs="cdn")
+    button_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    custom_css = """
-        <style>
-            body {
-                background-color: black;
-                color: white;
-                margin: 0;
-            }
-        </style>
-        """
+    if button_id == "save-btn":
+        html_str = pio.to_html(fig, full_html=True, include_plotlyjs="cdn")
 
-    html_str = html_str.replace("<head>", f"<head>{custom_css}")
+        custom_css = """
+            <style>
+                body {
+                    background-color: black;
+                    color: white;
+                    margin: 0;
+                }
+            </style>
+            """
 
-    return dict(content=html_str, filename="plot.html")
+        # html_str = html_str.replace("<head>", f"<head>{custom_css}")
+        return dict(content=html_str, filename="plot.html")
+
+    if button_id == "save-svg-btn":
+        from dash import dcc
+
+        return dcc.send_bytes(
+            lambda f: f.write(pio.to_image(
+                fig, format="svg", engine="kaleido")),
+            "plot.svg"
+        )
+
+    return dash.no_update
 
 
 if __name__ == "__main__":

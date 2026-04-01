@@ -1,0 +1,21 @@
+digraph {
+	D [label=Datasets]
+	W [label="Simple Wiki"]
+	T [label=TinyStories]
+	M [label=Mixed]
+	F [label="Factual QA"]
+	C [label="Corrupted QA"]
+	X [label="Context QA"]
+	S [label="Story Prompts"]
+	SC [label="Corrupted Prompts"]
+	CD [label="Cross-domain Test"]
+	D -> W
+	D -> T
+	D -> M
+	W -> F
+	W -> C
+	W -> X
+	T -> S
+	T -> SC
+	M -> CD
+}

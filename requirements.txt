@@ -3,3 +3,6 @@ requests
 pandas
 scikit-learn
 pyarrow
+dash
+plotly
+kaleido

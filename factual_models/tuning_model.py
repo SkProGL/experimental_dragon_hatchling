@@ -1,3 +1,4 @@
+import torch.nn.functional as F
 from dataclasses import dataclass
 import math
 import torch
@@ -7,6 +8,237 @@ import json
 from dataclasses import asdict
 
 # generation
+
+
+@torch.no_grad()
+def top_k_next_tokens(model, device, prompt, k=5):
+    idx = torch.tensor(
+        list(prompt.encode("utf-8")),
+        dtype=torch.long,
+        device=device
+    ).unsqueeze(0)
+
+    idx_cond = idx[:, -model.max_seq_len:] if hasattr(model, "max_seq_len") else idx
+    logits, _ = model(idx_cond)
+
+    probs = F.softmax(logits[:, -1, :], dim=-1)
+
+    topk_probs, topk_ids = torch.topk(probs, k)
+
+    results = []
+    for p, i in zip(topk_probs[0], topk_ids[0]):
+        token = bytes([i.item()]).decode("utf-8", errors="ignore")
+        results.append((repr(token), p.item()))
+
+    return results
+
+
+def to_ids(text, device):
+    return torch.tensor(
+        list(text.encode("utf-8")),
+        dtype=torch.long,
+        device=device
+    ).unsqueeze(0)
+
+
+@torch.no_grad()
+def greedy_decode(model, device, prompt_text, max_new_tokens=12):
+    idx = to_ids(prompt_text, device)
+
+    for _ in range(max_new_tokens):
+        # Transformer has max_seq_len; BDH in your code does not expose one
+        idx_cond = idx[:, -model.max_seq_len:] if hasattr(model, "max_seq_len") else idx
+
+        logits, _ = model(idx_cond)
+        next_id = torch.argmax(logits[:, -1, :], dim=-1, keepdim=True)  # argmax, no sampling
+        idx = torch.cat([idx, next_id], dim=1)
+
+    full_text = bytes(idx.squeeze(0).tolist()).decode("utf-8", errors="ignore")
+    return full_text[len(prompt_text):]  # continuation only
+
+
+@torch.no_grad()
+def score_candidate(model, device, prompt_text, candidate_text):
+    # Important: make prompt end with "A: " so candidate starts cleanly
+    prompt_ids = list(prompt_text.encode("utf-8"))
+    cand_ids = list(candidate_text.encode("utf-8"))
+
+    full_ids = torch.tensor(
+        [prompt_ids + cand_ids],
+        dtype=torch.long,
+        device=device
+    )
+
+    # predict next byte for every position
+    logits, _ = model(full_ids[:, :-1])
+    log_probs = F.log_softmax(logits[0], dim=-1)
+
+    # candidate bytes start being predicted at position len(prompt_ids)-1
+    start = len(prompt_ids) - 1
+    target = torch.tensor(cand_ids, dtype=torch.long, device=device)
+
+    token_logps = log_probs[start:start + len(cand_ids)].gather(
+        1, target.unsqueeze(1)
+    ).squeeze(1)
+
+    return {
+        "avg_logprob": token_logps.mean().item(),  # better when answer lengths differ
+        "sum_logprob": token_logps.sum().item(),
+    }
+
+
+def rank_candidates(model, device, prompt_text, candidates):
+    scored = []
+    for cand in candidates:
+        s = score_candidate(model, device, prompt_text, cand)
+        scored.append((cand, s["avg_logprob"], s["sum_logprob"]))
+    return sorted(scored, key=lambda x: x[1], reverse=True)
+
+
+def seed_prompts(seed=42):
+    import random
+    import torch
+    import numpy as np
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
+def print_ranking_table(run_config, model, device):
+    qs = [
+        {
+            "q": "The capital of France is",
+            "p": "Context: Paris\nQ: The capital of France is\nA: ",
+            "c": ["Paris", "Lyon", "London", "Canberra"],
+            "gt": "Paris",
+        },
+        {
+            "q": "The chemical symbol for gold is",
+            "p": "Context: Au\nQ: The chemical symbol for gold is\nA: ",
+            "c": ["Au", "Ag", "Fe", "Cu"],
+            "gt": "Au",
+        },
+        {
+            "q": "The square root of 144 is",
+            "p": "Context: 12\nQ: The square root of 144 is\nA: ",
+            "c": ["12", "14", "10", "16"],
+            "gt": "12",
+        },
+    ]
+
+    lines = ["\n## Model preference over candidate answers"]
+    lines.append("| Question | Candidates | Ranking (average log-probability) | Ground truth |")
+    lines.append("|----------|------------|------------------------|--------------|")
+
+    for item in qs:
+        r = rank_candidates(model, device, item["p"], item["c"])
+        r_txt = ", ".join([f"{x} ({s:.2f})" for x, s, _ in r])
+
+        line = f"| {item['q']} | {', '.join(item['c'])} | {r_txt} | {item['gt']} |"
+        lines.append(line)   # also saves
+
+    for l in lines:
+        print(l)          # still prints
+
+    from pathlib import Path
+    with open(Path(__file__).parent / "inference" / f"{run_config.run}_questions.md", "a") as f:
+        f.write("\n".join(lines) + "\n\n")
+
+
+def print_greedy_table(run_config, model, device):
+    qs = [
+        ("The capital of France is", "The capital of France is"),
+        ("Q: The capital of France is A:", "Q: The capital of France is A: "),
+        ("Context: Paris Q: The capital of France is A:", "Context: Paris Q: The capital of France is A: "),
+    ]
+
+    def format_topk(prompt):
+        tk = top_k_next_tokens(model, device, prompt, k=4)
+
+        parts = []
+        for tok, prob in tk:
+            # tok = tok.strip("'")
+            if tok == "\n":
+                tok = "\\n"
+            elif tok == " ":
+                tok = "[space]"
+            parts.append(f"{tok} ({prob:.2f})")
+
+        return ", ".join(parts)
+
+    content = ["## Greedy decoding outputs and top-4 next-token predictions"]
+
+    content.append("| Prompt | Greedy output | Top tokens |")
+    content.append("|--------|---------------|------------|")
+
+    for label, prompt in qs:
+        out = greedy_decode(model, device, prompt, max_new_tokens=8)
+        out = out.replace("\n", "\\n").replace("|", "\\|")
+
+        row = f"| {label} | `{out}` | {format_topk(prompt)} |"
+
+        content.append(row)
+
+    for r in content:
+        print(r)
+    from pathlib import Path
+    with open(Path(__file__).parent / "inference" / f"{run_config.run}_questions.md", "a") as f:
+        f.write("\n".join(content) + "\n\n")
+# def print_greedy_table(run_config, model, device):
+#     qs = [
+#         ("The capital of France is", "The capital of France is"),
+#         ("Q: The capital of France is A:", "Q: The capital of France is A: "),
+#         ("Context: Paris Q: The capital of France is A:", "Context: Paris Q: The capital of France is A: "),
+#     ]
+#
+#     def format_topk(prompt):
+#         tk = top_k_next_tokens(model, device, prompt, k=4)
+#
+#         parts = []
+#         for tok, prob in tk:
+#             # tok = tok.strip("'")
+#             if tok == "\n":
+#                 tok = "\\n"
+#             elif tok == " ":
+#                 tok = "[space]"
+#             parts.append(f"{tok} ({prob:.2f})")
+#
+#         return ", ".join(parts)
+#
+#     print("| Prompt | Greedy output | Top tokens |")
+#     print("|--------|---------------|------------|")
+#
+#     for label, prompt in qs:
+#         out = greedy_decode(model, device, prompt, max_new_tokens=8)
+#         out = out.replace("\n", "\\n").replace("|", "\\|")
+#
+#         print(f"| {label} | `{out}` | {format_topk(prompt)} |")
+#
+#     from pathlib import Path
+#     with open(Path(__file__).parent / "inference" / f"{run_config.run}_questions.md", "a") as f:
+#         f.write("\n".join(content) + "\n\n")
+
+
+def extra_questions(model, device):
+    # prompt = "Context: Paris\nQ: The capital of France is\nA: "
+    prompt = "Q: The capital of France is\nA: "
+    # prompt = "The capital of France is "
+    print(prompt)
+    out = greedy_decode(model, device, prompt, max_new_tokens=8)
+
+    print(f"\033[43m\033[30mgreedy_decode\033[0m")
+    print(repr(out))
+
+    prompt = "Context: Paris\nQ: The capital of France is\nA: "
+    # prompt = "The capital of France is "
+    candidates = ["Paris", "Lyon", "London", "Canberra"]
+    print(f"\033[43m\033[30mrand_candidates\033[0m")
+    print(rank_candidates(model, device, prompt, candidates))
+
+    print(f"\033[43m\033[30mtop_k\033[0m")
+    print(top_k_next_tokens(model, device, prompt))
 
 
 def generate_text(device, model, prompt_text, max_new_tokens=100, top_k=3, temperature=1.0):
@@ -102,17 +334,17 @@ def run_questions_from_file(run_config, device, filepath, model):
     context_table = format_rows(context_rows)
     # save to file
     with open(Path(__file__).parent / "inference" / f"{run_config.run}_questions.md", "w") as f:
-        f.write("## Normal Questions\n")
+        f.write("## Normal questions\n")
         f.write("\n| Prompt | Output |\n|--------|--------|\n")
         f.write("\n".join(normal_table))
 
-        f.write("\n\n## Corrupted Questions\n")
+        f.write("\n\n## Corrupted questions\n")
         f.write("\n| Prompt | Output |\n|--------|--------|\n")
         f.write("\n".join(corrupted_table))
 
-        # f.write("\n\n## Context Questions\n")
-        # f.write("\n| Prompt | Output |\n|--------|--------|\n")
-        # f.write("\n".join(context_table))
+        f.write("\n\n## Context questions\n")
+        f.write("\n| Prompt | Output |\n|--------|--------|\n")
+        f.write("\n".join(context_table))
 
 
 def save_metrics(run_config, metrics):
@@ -147,7 +379,7 @@ def interact(model_type="bdh"):
                 f"{i}: {r.run}, L={r.bdh_n_layer}, D={r.bdh_n_embd}, H={r.bdh_n_head}, BATCH_SIZE={r.train_batch_size}")
 
     elif model_type == "transformer":
-        prefixes = ["B", "D", "E"]
+        prefixes = ["B", "D", "F"]
         cpu_names = [f"{p}cpu" for p in prefixes]
         runs = [
             globals()[name]

@@ -14,12 +14,13 @@ import torch
 import pandas as pd
 
 
-print(os.listdir())
-with open('run.txt', 'r')as f:
-    run = f.read()
-    print(f">{run}<")
-# run_config = tuning_model.interact('transformer')
-run_config = getattr(tuning_model, str(run))
+# print(os.listdir())
+# with open('run.txt', 'r')as f:
+#     run = f.read()
+#     print(f"{run}")
+run_config = tuning_model.interact('transformer')
+# run_config = getattr(tuning_model, str(run))
+
 DATASET_NAME = tuning_model.datasets[run_config.run[0]]
 
 metrics = tuning_model.EvaluationMetricsConfiguration(
@@ -93,7 +94,7 @@ LOG_FREQ = run_config.train_log_freq
 def get_batch(split):
     # NEW
     if DATASET_NAME == "mixed":
-        if np.random.rand() < 0.5:
+        if np.random.rand() < 0.7:
             data = load_dataset.load_wiki()
             if split == "train":
                 data = data[: int(0.9 * len(data))]
@@ -111,17 +112,6 @@ def get_batch(split):
             data = data[: int(0.9 * len(data))]
         else:
             data = data[int(0.9 * len(data)):]
-    # OLD
-    # if DATASET_NAME == "tinystories":
-    #     data = load_dataset.load_tinystories()[split]
-    # elif DATASET_NAME == "wiki":
-    #     data = load_dataset.load_wiki()
-    #     # NO NEED to split due to separate validation dataset
-    #     # training and validation split .9 to .1
-    #     if split == "train":
-    #         data = data[: int(0.9 * len(data))]
-    #     else:
-    #         data = data[int(0.9 * len(data)):]
 
     ix = torch.randint(len(data) - BLOCK_SIZE, (BATCH_SIZE,))
 
