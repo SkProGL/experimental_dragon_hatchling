@@ -17,5 +17,8 @@ if __name__ == "__main__":
     elif mode == "itf":
         from factual_models.tf_infer import main as infer_main
         infer_main()
+    elif mode == "vbdh":
+        from factual_models.viz_bdh_infer import main as infer_main
+        infer_main()
     else:
         raise ValueError(f"Unknown mode: {mode}. Use bdh, tf, or inference.")

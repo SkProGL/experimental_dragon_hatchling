@@ -3,3 +3,4 @@
 *.pt
 */tinystories
 results/*
+.tmp/
