@@ -20,5 +20,19 @@ if __name__ == "__main__":
     elif mode == "vbdh":
         from factual_models.viz_bdh_infer import main as infer_main
         infer_main()
+    elif mode == "cbdh":
+        from counting_models.count_bdh_train import main as count_main
+        count_main()
+
+    elif mode == "icbdh":
+        from counting_models.count_bdh_infer import main as count_main
+        count_main()
+    elif mode == "ctf":
+        from counting_models.count_tf_train import main as count_main
+        count_main()
+
+    elif mode == "ictf":
+        from counting_models.count_tf_infer import main as count_main
+        count_main()
     else:
         raise ValueError(f"Unknown mode: {mode}. Use bdh, tf, or inference.")

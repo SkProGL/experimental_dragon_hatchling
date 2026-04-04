@@ -13,8 +13,8 @@ import os
 import torch
 import pandas as pd
 
-# SPECIFY HERE THE RUN CONFIG (e.g. A1, A2)
 
+# SPECIFY HERE THE RUN CONFIG (e.g. A1, A2)
 print(os.listdir())
 with open('run.txt', 'r')as f:
     run = f.read()

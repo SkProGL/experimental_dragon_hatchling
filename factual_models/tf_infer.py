@@ -40,12 +40,6 @@ def load_model():
 
     state_dict = torch.load(MODEL_PATH, map_location=device)[
         "model_state_dict"]
-    # ckpt = torch.load(MODEL_PATH, map_location="cpu")
-    # print(list(ckpt["model_state_dict"].keys())[:5])
-    #
-    # for k, v in ckpt["model_state_dict"].items():
-    #     print(k, v.shape)
-    #     break
 
     # fix: remove "_orig_mod." prefix
     new_state_dict = {k.replace("_orig_mod.", ""):
@@ -74,6 +68,6 @@ def main():
 
     tuning_model.run_questions_from_file(run_config, device, DATA_PATH, model)
 
-    # print("\n=== GENERATED TEXT ===\n")
+    # print("\nGENERATED TEXT \n")
     # print(result)
     # print_markdown_table(prompt, result)

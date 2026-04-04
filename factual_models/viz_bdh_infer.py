@@ -33,7 +33,7 @@ GPUSupport()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# MODEL LOADING
+# model loading
 def load_model():
     config = bdh_model.BDHConfig(
         n_layer=run_config.bdh_n_layer,
@@ -58,7 +58,7 @@ def load_model():
     return model
 
 
-# TOKEN HELPERS
+# token helpers
 def text_to_ids(text, device):
     return torch.tensor(
         list(text.encode("utf-8")),
@@ -71,7 +71,7 @@ def ids_to_text(idx):
     return bytes(idx.squeeze(0).tolist()).decode("utf-8", errors="ignore")
 
 
-# LATENT EXTRACTION
+# latent extraction
 @torch.no_grad()
 def collect_bdh_latents(model, idx):
     """

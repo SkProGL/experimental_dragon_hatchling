@@ -325,12 +325,12 @@ def run_questions_from_file(run_config, device, filepath, model):
         return formatted
 
     # print both tables
-    print("\n=== NORMAL QUESTIONS ===")
+    print("\nNORMAL QUESTIONS")
     normal_table = format_rows(normal_rows)
 
-    print("\n=== CORRUPTED QUESTIONS ===")
+    print("\nCORRUPTED QUESTIONS")
     corrupted_table = format_rows(corrupted_rows)
-    print("\n=== CONTEXT QUESTIONS ===")
+    print("\nCONTEXT QUESTIONS")
     context_table = format_rows(context_rows)
     # save to file
     with open(Path(__file__).parent / "inference" / f"{run_config.run}_questions.md", "w") as f:
