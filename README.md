@@ -1,27 +1,8 @@
 ## Tuning & visualisation of Dragon Hatchling architecture 
-https://github.com/pathwaycom/bdh
+Prerequisite: https://github.com/pathwaycom/bdh
 
-1.1 if there isn't enough data and it only occurs a few times, model doesn't fully learn and is more likely to hallucinate
-1.2 fluent continuations
-1.3 temperature can add more vocabulary/creativity to answers
-
-### TODO next
-Compare & monitor logits, with Transformer model
-
-- Reference research questions
-- Where it would be applicable and answer research question
-- What could be optimized?
-- Was it quantized?
-- Double check hyperparameters from BDH paper.
-- Compare A1 and A6 on inference
-- check probabilities outside logits
-
-## Factual model
-1. Make model stable
-2. Scale moderately
-3. Train longer
-4. Compare perplexity
-5. Only then experiment with LoRA
+<img src="A10_latent_animation.gif" width="500" height="500" />
+<img src="A_to_F.png" width="500" height="500" />
 
 # English-WIKI dataset
 ### 1.0 invariant model components
@@ -43,8 +24,6 @@ Training & inference
 NOTE: Batch size is dynamically adjusted per run based on available GPU memory and effective utilization, rather than being fixed across experiments.
 
 ### 1.1 Initial sweep and follow-up sweep (informed by initial results)
-
-Pick best run based on validation loss, but mention compute cost and diminishing returns.
 
 # English-WIKI dataset
 ##### (BDH) Tunable hyperparameters
